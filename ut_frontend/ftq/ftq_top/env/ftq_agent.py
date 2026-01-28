@@ -1,4 +1,5 @@
 from toffee import *
+from ut_frontend.ftq.ftq_top.test.utils import FTQSIZE
 
 
 class FtqAgent(Agent):
@@ -601,3 +602,12 @@ class FtqAgent(Agent):
         self.bundle.fromBpuNew.s3.ftq_idx_flag.value = dict['ftq_idx_flag']
         self.bundle.fromBpuNew.s3.ftq_idx_value.value = dict['ftq_idx_value']
         return self.bundle.as_dict()
+    
+    @monitor_method()
+    async def check_bpu_resp_valid_requirement(self):
+        dut = self.bundle._Bundle__dut_instance__
+        if dut.canCommit.value == 1 or dut.valid_entries() < FTQSIZE:
+            assert dut.io_fromBpu_resp_valid.value == 1
+        else:
+            assert dut.io_fromBpu_resp_valid.value == 0
+        return dut.io_fromBpu_resp_valid.value
