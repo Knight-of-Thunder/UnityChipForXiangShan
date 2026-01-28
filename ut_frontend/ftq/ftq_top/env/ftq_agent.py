@@ -542,4 +542,62 @@ class FtqAgent(Agent):
         
         return self.bundle.fromBpu.resp_ready.value    
 
-    
+    @driver_method()
+    async def drive_s1_full_signals(self, dict):
+        self.bundle.fromBpuNew.valid.value = dict['valid']
+        self.bundle.fromBpuNew.s1.pc_3.value = dict['pc_3']
+        self.bundle.fromBpuNew.s1.full_pred_3_fallThroughErr.value = dict['full_pred_3_fallThroughErr']
+        self.bundle.fromBpuNew.s1.full_pred_3_br_taken_mask_0.value = dict['full_pred_3_br_taken_mask_0']
+        self.bundle.fromBpuNew.s1.full_pred_3_br_taken_mask_1.value = dict['full_pred_3_br_taken_mask_1']
+        self.bundle.fromBpuNew.s1.full_pred_3_slot_valids_0.value = dict['full_pred_3_slot_valids_0']
+        self.bundle.fromBpuNew.s1.full_pred_3_slot_valids_1.value = dict['full_pred_3_slot_valids_1']
+        self.bundle.fromBpuNew.s1.full_pred_3_targets_0.value = dict['full_pred_3_targets_0']
+        self.bundle.fromBpuNew.s1.full_pred_3_targets_1.value = dict['full_pred_3_targets_1']
+        self.bundle.fromBpuNew.s1.full_pred_3_offsets_0.value = dict['full_pred_3_offsets_0']
+        self.bundle.fromBpuNew.s1.full_pred_3_offsets_1.value = dict['full_pred_3_offsets_1']
+        self.bundle.fromBpuNew.s1.full_pred_3_fallThroughAddr.value = dict['full_pred_3_fallThroughAddr']
+        self.bundle.fromBpuNew.s1.full_pred_3_is_br_sharing.value = dict['full_pred_3_is_br_sharing']
+        self.bundle.fromBpuNew.s1.full_pred_3_hit.value = dict['full_pred_3_hit']
+        return self.bundle.as_dict()
+
+    @driver_method()
+    async def drive_s2_full_signals(self, dict):
+        self.bundle.fromBpuNew.s2.pc_3.value = dict['pc_3']
+        self.bundle.fromBpuNew.s2.full_pred_3_fallThroughErr.value = dict['full_pred_3_fallThroughErr']
+        self.bundle.fromBpuNew.s2.full_pred_3_br_taken_mask_0.value = dict['full_pred_3_br_taken_mask_0']
+        self.bundle.fromBpuNew.s2.full_pred_3_br_taken_mask_1.value = dict['full_pred_3_br_taken_mask_1']
+        self.bundle.fromBpuNew.s2.full_pred_3_slot_valids_0.value = dict['full_pred_3_slot_valids_0']
+        self.bundle.fromBpuNew.s2.full_pred_3_slot_valids_1.value = dict['full_pred_3_slot_valids_1']
+        self.bundle.fromBpuNew.s2.full_pred_3_targets_0.value = dict['full_pred_3_targets_0']
+        self.bundle.fromBpuNew.s2.full_pred_3_targets_1.value = dict['full_pred_3_targets_1']
+        self.bundle.fromBpuNew.s2.full_pred_3_offsets_0.value = dict['full_pred_3_offsets_0']
+        self.bundle.fromBpuNew.s2.full_pred_3_offsets_1.value = dict['full_pred_3_offsets_1']
+        self.bundle.fromBpuNew.s2.full_pred_3_fallThroughAddr.value = dict['full_pred_3_fallThroughAddr']
+        self.bundle.fromBpuNew.s2.full_pred_3_is_br_sharing.value = dict['full_pred_3_is_br_sharing']
+        self.bundle.fromBpuNew.s2.full_pred_3_hit.value = dict['full_pred_3_hit']
+        self.bundle.fromBpuNew.s2.valid_3.value = dict['valid']
+        self.bundle.fromBpuNew.s2.hasRedirect_3.value = dict['hasRedirect_3']
+        self.bundle.fromBpuNew.s2.ftq_idx_flag.value = dict['ftq_idx_flag']
+        self.bundle.fromBpuNew.s2.ftq_idx_value.value = dict['ftq_idx_value']
+        return self.bundle.as_dict()
+
+    @driver_method()
+    async def drive_s3_full_signals(self, dict):
+        self.bundle.fromBpuNew.s3.pc_3.value = dict['pc_3']
+        self.bundle.fromBpuNew.s3.full_pred_3_fallThroughErr.value = dict['full_pred_3_fallThroughErr']
+        self.bundle.fromBpuNew.s3.full_pred_3_br_taken_mask_0.value = dict['full_pred_3_br_taken_mask_0']
+        self.bundle.fromBpuNew.s3.full_pred_3_br_taken_mask_1.value = dict['full_pred_3_br_taken_mask_1']
+        self.bundle.fromBpuNew.s3.full_pred_3_slot_valids_0.value = dict['full_pred_3_slot_valids_0']
+        self.bundle.fromBpuNew.s3.full_pred_3_slot_valids_1.value = dict['full_pred_3_slot_valids_1']
+        self.bundle.fromBpuNew.s3.full_pred_3_targets_0.value = dict['full_pred_3_targets_0']
+        self.bundle.fromBpuNew.s3.full_pred_3_targets_1.value = dict['full_pred_3_targets_1']
+        self.bundle.fromBpuNew.s3.full_pred_3_offsets_0.value = dict['full_pred_3_offsets_0']
+        self.bundle.fromBpuNew.s3.full_pred_3_offsets_1.value = dict['full_pred_3_offsets_1']
+        self.bundle.fromBpuNew.s3.full_pred_3_fallThroughAddr.value = dict['full_pred_3_fallThroughAddr']
+        self.bundle.fromBpuNew.s3.full_pred_3_is_br_sharing.value = dict['full_pred_3_is_br_sharing']
+        self.bundle.fromBpuNew.s3.full_pred_3_hit.value = dict['full_pred_3_hit']
+        self.bundle.fromBpuNew.s3.valid_3.value = dict['valid']
+        self.bundle.fromBpuNew.s3.hasRedirect_3.value = dict['hasRedirect_3']
+        self.bundle.fromBpuNew.s3.ftq_idx_flag.value = dict['ftq_idx_flag']
+        self.bundle.fromBpuNew.s3.ftq_idx_value.value = dict['ftq_idx_value']
+        return self.bundle.as_dict()
