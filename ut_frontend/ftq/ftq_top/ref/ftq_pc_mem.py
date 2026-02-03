@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from typing import List
+
+from ut_frontend.ftq.ftq_top.env.ftq_bundle import BranchPredictionBundle
 FTQSIZE = 64
 @dataclass
 class Ftq_RF_Components:
@@ -11,9 +13,9 @@ class Ftq_RF_Components:
     def from_branch_prediction(cls, bp: BranchPredictionBundle):
         """从 BranchPredictionBundle 构造"""
         return cls(
-            startAddr=bp.pc,
-            nextLineAddr=bp.pc + 64,  # Cache line = 64 bytes
-            fallThruError=bp.fallThruError
+            startAddr=bp.pc_3.value,
+            nextLineAddr=bp.pc_3.value + 64,  # Cache line = 64 bytes
+            fallThruError=bp.full_pred_3_fallThroughErr.value and bp.full_pred_3_hit.value,
         )
 
 class FTQPCMem:
@@ -25,6 +27,6 @@ class FTQPCMem:
         if wen and 0 <= waddr < self.size:
             self.mem[waddr] = wdata
 
-    def read(self, ren: bool, raddr: int,) -> List[Ftq_RF_Components]:
+    def read(self, ren: bool, raddr: int,):
         if ren and 0 <= raddr < self.size:
-            return mem[raddr]
+            return self.mem[raddr]

@@ -1,4 +1,5 @@
-from toffee import *  
+from toffee import *
+from ut_frontend.bpu.tagesc import bundle  
 
 class IfuPdSlotBundle(Bundle):
     brType = Signal()
@@ -162,13 +163,131 @@ class FromIfuBundle(Bundle):
     pdWb_bits_pc_14 = Signal()
     pdWb_bits_pc_15 = Signal()
 
+# class FtqBundle(Bundle):
+
+    
+#     fromBackend = FromBackendBundle.from_prefix("fromBackend_")  
+#     fromIfu = FromIfuBundle.from_prefix("fromIfu_")  
+#     fromBpu = FromBpuBundle.from_prefix("fromBpu_")
+#     toIfu = ToIfuBundle.from_prefix("toIfu_")
+#     toICache = ToICacheBundle.from_prefix("toICache_")  
+#     toPrefetch = ToPrefetchBundle.from_prefix("toPrefetch_")  
+
+#     fromBpuNew = BranchPredictionResp.from_prefix("fromBpu_resp_bits_")
+
+
+class BranchPredictionBundle(Bundle):
+    # Pins every stage share
+    pc_3 = Signal()
+    full_pred_3_br_taken_mask_0 = Signal()
+    full_pred_3_br_taken_mask_1 = Signal()
+    full_pred_3_slot_valids_0 = Signal()
+    full_pred_3_slot_valids_1 = Signal()
+    full_pred_3_targets_0 = Signal()
+    full_pred_3_targets_1 = Signal()
+    full_pred_3_offsets_0 = Signal()
+    full_pred_3_offsets_1 = Signal()
+    full_pred_3_fallThroughAddr = Signal()
+    full_pred_3_fallThroughErr = Signal()
+    full_pred_3_is_br_sharing = Signal()
+    full_pred_3_hit = Signal()
+
+    # Only for s2 and s3
+    # valid_3 = Signal()
+    # hasRedirect_3 = Signal()
+    # ftq_idx_flag = Signal()  
+    # ftq_idx_value = Signal()  
+
+class BranchPredictionBundleforS23(BranchPredictionBundle):
+
+    # Only for s2 and s3
+    valid_3 = Signal()
+    hasRedirect_3 = Signal()
+    ftq_idx_flag = Signal()  
+    ftq_idx_value = Signal()  
+
+
+class LastStageFtbEntryBundle(Bundle):
+    isCall = Signal()
+    isRet = Signal()
+    isJalr = Signal()
+    valid = Signal()
+    brSlots_0_offset = Signal()
+    brSlots_0_sharing = Signal()
+    brSlots_0_valid = Signal()
+    brSlots_0_lower = Signal()
+    brSlots_0_tarStat = Signal()
+    tailSlot_offset = Signal()         
+    tailSlot_sharing = Signal()
+    tailSlot_valid = Signal()
+    tailSlot_lower = Signal()
+    tailSlot_tarStat = Signal()
+    pftAddr = Signal()
+    carry = Signal()
+    last_may_be_rvi_call = Signal()
+    strong_bias_0 = Signal()
+    strong_bias_1 = Signal()
+
+class LastStageSpecInfoBundle(Bundle):
+    histPtr_flag = Signal()
+    histPtr_value = Signal()
+    ssp = Signal()
+    sctr = Signal()
+    TOSW_flag = Signal()
+    TOSW_value = Signal()
+    TOSR_flag = Signal()
+    TOSR_value = Signal()
+    NOS_flag = Signal()
+    NOS_value = Signal()
+    topAddr = Signal()
+    sc_disagree_0 = Signal()
+    sc_disagree_1 = Signal()
+
+class LastStageMetaBundle(Bundle):
+    last_stage_meta = Signal()
+
+class BranchPredictionResp(Bundle):
+    valid = Signal()  
+    ready = Signal()
+    s1 = BranchPredictionBundle.from_prefix("bits_s1_")
+    s2 = BranchPredictionBundleforS23.from_prefix("bits_s2_")  
+    s3 = BranchPredictionBundleforS23.from_prefix("bits_s3_")
+
+    last_stage_spec_info = LastStageSpecInfoBundle.from_prefix("bits_last_stage_spec_info_")
+    last_stage_meta = LastStageMetaBundle.from_prefix("bits_")
+    last_stage_ftb_entry = LastStageFtbEntryBundle.from_prefix("bits_last_stage_ftb_entry_")
+
+    def selected_resp(self) -> BranchPredictionBundle:
+        """模拟 PriorityMux：选最高优先级有效的阶段"""
+        if self.s3.valid_3.value and self.s3.hasRedirect_3.value:
+            print("s3 selected")
+            return self.s3
+        elif self.s2.valid_3.value and self.s2.hasRedirect_3.value:
+            print("s2 selected")
+            return self.s2
+        elif self.valid.value:
+            print("s1 selected")
+            return self.s1 
+        else:
+            print("No stage selected, fallback to s1")
+            return self.s1  # fallback
+
+    # def last_stage(self) -> BranchPredictionBundle:
+    #     """s3 是 last stage"""
+    #     return self.s3
+
+# class NewFromBpuBundle(Bundle):
+#     pred = BranchPredictionBundle.from_prefix("pred_")
+
+
 class FtqBundle(Bundle):
 
     
     fromBackend = FromBackendBundle.from_prefix("fromBackend_")  
     fromIfu = FromIfuBundle.from_prefix("fromIfu_")  
-    fromBpu = FromBpuBundle.from_prefix("fromBpu_")
+    # fromBpu = FromBpuBundle.from_prefix("fromBpu_")
     toIfu = ToIfuBundle.from_prefix("toIfu_")
     toICache = ToICacheBundle.from_prefix("toICache_")  
     toPrefetch = ToPrefetchBundle.from_prefix("toPrefetch_")  
 
+    fromBpuNew = BranchPredictionResp.from_prefix("fromBpu_resp_")

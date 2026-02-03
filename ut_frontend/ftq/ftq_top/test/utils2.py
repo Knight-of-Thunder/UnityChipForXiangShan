@@ -36,25 +36,45 @@ def unpack_ftq_meta(raw):
         b += w
         return v
 
-    # 必须要严格按照 Verilog 拼接的【逆序】来解析：
+    # Unpack according to the order in hardware
+    # {       io_w_req_bits_data_0_meta,
+    #         io_w_req_bits_data_0_ftb_entry_isCall,
+    #         io_w_req_bits_data_0_ftb_entry_isRet,
+    #         io_w_req_bits_data_0_ftb_entry_isJalr,
+    #         io_w_req_bits_data_0_ftb_entry_valid,
+    #         io_w_req_bits_data_0_ftb_entry_brSlots_0_offset,
+    #         io_w_req_bits_data_0_ftb_entry_brSlots_0_sharing,
+    #         io_w_req_bits_data_0_ftb_entry_brSlots_0_valid,
+    #         io_w_req_bits_data_0_ftb_entry_brSlots_0_lower,
+    #         io_w_req_bits_data_0_ftb_entry_brSlots_0_tarStat,
+    #         io_w_req_bits_data_0_ftb_entry_tailSlot_offset,
+    #         io_w_req_bits_data_0_ftb_entry_tailSlot_sharing,
+    #         io_w_req_bits_data_0_ftb_entry_tailSlot_valid,
+    #         io_w_req_bits_data_0_ftb_entry_tailSlot_lower,
+    #         io_w_req_bits_data_0_ftb_entry_tailSlot_tarStat,
+    #         io_w_req_bits_data_0_ftb_entry_pftAddr,
+    #         io_w_req_bits_data_0_ftb_entry_carry,
+    #         io_w_req_bits_data_0_ftb_entry_last_may_be_rvi_call,
+    #         io_w_req_bits_data_0_ftb_entry_strong_bias_1,
+    #         io_w_req_bits_data_0_ftb_entry_strong_bias_0}
     
-    # 1. 硬件最末尾：strong_bias
-    e.ftb["strong_bias_0"] = take(1)  # 对应硬件拼接最后一位
+    # 1. strong_bias
+    e.ftb["strong_bias_0"] = take(1)
     e.ftb["strong_bias_1"] = take(1)
     
-    # 2. 倒数第二个：flags
+    # 2. flags
     e.ftb["last_may_be_rvi_call"] = take(1)
     e.ftb["carry"]                = take(1)
     e.ftb["pftAddr"]              = take(4)
     
-    # 3. tailSlot 系列 (逆序)
+    # 3. tailSlot
     e.ftb["tailSlot"]["tarStat"]  = take(2)
     e.ftb["tailSlot"]["lower"]    = take(20)
     e.ftb["tailSlot"]["valid"]    = take(1)
     e.ftb["tailSlot"]["sharing"]  = take(1)
     e.ftb["tailSlot"]["offset"]   = take(4)
     
-    # 4. brSlot 系列 (逆序)
+    # 4. brSlot
     e.ftb["brSlot"]["tarStat"]    = take(2)
     e.ftb["brSlot"]["lower"]      = take(12)
     e.ftb["brSlot"]["valid"]      = take(1)
@@ -67,7 +87,7 @@ def unpack_ftq_meta(raw):
     e.ftb["isRet"]  = take(1)
     e.ftb["isCall"] = take(1)
     
-    # 6. 硬件最开头（最高位）：meta
+    # 6. the highest：meta
     e.meta = take(516)
 
     assert b == 576, f"Mismatch! Expected 576, got {b}"
