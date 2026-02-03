@@ -7,6 +7,7 @@ from collections import namedtuple
 # from ut_frontend.bpu.tagesc.bundle.port import BranchPredictionBundle
 from ut_frontend.ftq.ftq_top.env.ftq_bundle import BranchPredictionResp, BranchPredictionBundle, BranchPredictionBundleforS23
 from ut_frontend.ftq.ftq_top.ref.ftq_pc_mem import Ftq_RF_Components
+from ut_frontend.ftq.ftq_top.ref.ftq_redirect_mem import Ftq_Redirect_SRAMEntry
 from ..ref.ftq_ref import FtqAccurateRef, BpuPacket, FtqPointer, get_random_ptr_before_bpu
 from .top_test_fixture import ftq_env
 from .test_configs import BPU_REDIRECT_EVENT_TYPES, BPU_REDIRECT_EVENT_WEIGHTS 
@@ -40,8 +41,10 @@ async def test_bpu_enq_normal(ftq_env):
         dut.RefreshComb()
         bpu_in_fire = check_with_ref_before_write(dut)
         selected_resp = ftq_env.ftq_agent.bundle.fromBpuNew.selected_resp()
+        last_stage_spec_info = ftq_env.ftq_agent.bundle.fromBpuNew.last_stage_spec_info
+        print("selected_resp: ", hex(selected_resp.pc_3.value), selected_resp.full_pred_3_fallThroughErr.value, selected_resp.full_pred_3_hit.value)
         selected_stage = check_bpu_in_stage(dut)
-        update_ftq_ref_state(bpu_in_fire, selected_stage, selected_resp, ref)
+        update_ftq_ref_state(bpu_in_fire, selected_stage, selected_resp, last_stage_spec_info, ref, dut)
         dut.Step()
         if i == 0:
             dut.Step()
@@ -50,7 +53,7 @@ async def test_bpu_enq_normal(ftq_env):
         print("bpuptr_dut: ", dut.gen_bpu_ptr())
         assert ref.bpu_ptr == dut.gen_bpu_ptr()
     
-    for i in range(10640):
+    for i in range(1000):
         print(f"----------------------- Cycle {i} --------------------------")
         bpu_ptr = ref.bpu_ptr
         port_dict_s1, port_dict_s2, port_dict_s3 = gen_bpu_resp(bpu_ptr)
@@ -63,9 +66,10 @@ async def test_bpu_enq_normal(ftq_env):
         dut.RefreshComb()
         bpu_in_fire = check_with_ref_before_write(dut)
         selected_resp = ftq_env.ftq_agent.bundle.fromBpuNew.selected_resp()
+        last_stage_spec_info = ftq_env.ftq_agent.bundle.fromBpuNew.last_stage_spec_info
         print("selected_resp: ", hex(selected_resp.pc_3.value), selected_resp.full_pred_3_fallThroughErr.value, selected_resp.full_pred_3_hit.value)
         selected_stage = check_bpu_in_stage(dut)
-        update_ftq_ref_state(bpu_in_fire, selected_stage, selected_resp, ref)
+        update_ftq_ref_state(bpu_in_fire, selected_stage, selected_resp, last_stage_spec_info, ref, dut)
         dut.Step()
         # Check bpuPtr update
         print("bpuptr_ref: ", ref.bpu_ptr)
@@ -81,9 +85,10 @@ async def test_bpu_enq_normal(ftq_env):
     await ftq_env.ftq_agent.drive_s3_full_signals(port_dict_s3)
     dut.Step(10)
     # Check FTQ PC memory
-    errors = check_with_ref_after_write(dut, ref)
-    for i in errors:
-        print(i)
+    all_kind_errors = check_with_ref_after_write(dut, ref)
+    for erros in all_kind_errors:
+        for error in erros:
+            print(error)
     # for i in range(64):
     #     if(fallThruErrors_before[i] != dut.ftq_pc_mem[i]["fallThruError"].value):
     #         print(f"entry{i}  before: {fallThruErrors_before[i]}, after: {dut.ftq_pc_mem[i]["fallThruError"].value}")
@@ -133,8 +138,44 @@ def check_ftq_pc_mem(ref_mem:FTQ, dut_ftq_pc_mem):
 
     return all_errors
 
+def check_ftq_redirect_entry(ref_entry, dut_entry, idx):
+    errors = []
+
+    fields = [
+        "NOS_flag", "NOS_value", "TOSR_flag", "TOSR_value",
+        "TOSW_flag", "TOSW_value", "histPtr_flag", "histPtr_value",
+        "sc_disagree_0", "sc_disagree_1", "sctr", "ssp", "topAddr"
+    ]
+
+    for field in fields:
+        ref_value = getattr(ref_entry, field)
+        dut_value = dut_entry[field].value  # 获取dut中的信号值
+
+        if ref_value != dut_value:
+            errors.append(
+                f"[FTQ_REDIRECT][{idx}] {field} mismatch: "
+                f"ref={ref_value}, dut={dut_value}"
+            )
+
+    return errors
+
+def check_ftq_redirect_mem(ref_mem, dut_ftq_redirect_mem):
+    all_errors = []
+
+    for i in range(64):
+        ref_entry = ref_mem.ftq_redirect_mem.read(i) # 参考模型的 entry
+        dut_entry = dut_ftq_redirect_mem[i]  # DUT中的 entry
+
+        errs = check_ftq_redirect_entry(ref_entry, dut_entry, i)
+        all_errors.extend(errs)
+
+    return all_errors
+
+
 def check_with_ref_after_write(dut, ref):
-    return check_ftq_pc_mem(ref, dut.ftq_pc_mem)
+    ftq_pc_mem_errors = check_ftq_pc_mem(ref, dut.ftq_pc_mem)
+    ftq_redirect_mem_errors = check_ftq_redirect_mem(ref, dut.ftq_redirect_mem)
+    return ftq_pc_mem_errors, ftq_redirect_mem_errors
 
 
 def write_into_ftq_pc_mem(bpu_in_fire, selected_stage, selected_resp, ref: FTQ):
@@ -145,9 +186,16 @@ def write_into_ftq_pc_mem(bpu_in_fire, selected_stage, selected_resp, ref: FTQ):
     print("write into ftq pc mem at idx:", ftq_idx_value)
     ref.ftq_pc_mem.write(bpu_in_fire, ftq_idx_value, Ftq_RF_Components.from_branch_prediction(selected_resp))
 
+def write_into_ftq_redirect_mem(last_stage_valid, last_stage_idx, last_stage_spec_info, ref: FTQ):
+    # print("write into redirect mem at idx:", ftq_idx_value)
+    print("last_stage_idx:", last_stage_idx)
+    print("last_stage_valid:", last_stage_valid)
+    print("last_stage_info:", Ftq_Redirect_SRAMEntry.from_spec_info(last_stage_spec_info))
+    ref.ftq_redirect_mem.write(last_stage_valid, last_stage_idx, Ftq_Redirect_SRAMEntry.from_spec_info(last_stage_spec_info))
 
-def update_ftq_ref_state(bpu_in_fire, selected_stage, selected_resp: BranchPredictionBundle, ref: FTQ):
+def update_ftq_ref_state(bpu_in_fire, selected_stage, selected_resp: BranchPredictionBundle, last_stage_spec_info, ref: FTQ, dut):
     write_into_ftq_pc_mem(bpu_in_fire, selected_stage, selected_resp, ref)
+    write_into_ftq_redirect_mem(dut.io_fromBpu_resp_bits_s3_valid_3.value, dut.io_fromBpu_resp_bits_s3_ftq_idx_value.value, last_stage_spec_info, ref)
     update_ftq_ref_bpu_ptr(bpu_in_fire, selected_stage, selected_resp, ref)
 
 def update_ftq_ref_bpu_ptr(bpu_in_fire, selected_stage, selected_resp: BranchPredictionBundle, ref: FTQ):

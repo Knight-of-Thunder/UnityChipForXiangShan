@@ -128,8 +128,8 @@ class NewDUTFtqTop(DUTFtqTop):
             "topAddr",
         ]
         for waddr in range(64):
-            bank = waddr % 4
-            entry = waddr // 4
+            bank = waddr // 16 
+            entry = waddr % 16
 
             for field in fields:
                 sig = (

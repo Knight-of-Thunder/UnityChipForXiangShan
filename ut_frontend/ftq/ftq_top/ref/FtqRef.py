@@ -4,7 +4,7 @@ from .FtqPtr import *
 from .ftq_pc_mem import *
 # from .ftq_pd_mem import *
 # from .ftq_meta_mem import *
-# from .ftq_redirect_mem import *
+from .ftq_redirect_mem import *
 
 FTQSIZE = 64
 class FTQ:
@@ -23,7 +23,7 @@ class FTQ:
         self.ftq_pc_mem = FTQPCMem(size)
         # self.ftq_pd_mem = FTQPDMem(size)
         # self.meta_mem = FTQMeta1RSram(size)
-        # self.redirect_mem = FTQRedirectMem(size)
+        self.ftq_redirect_mem = FTQRedirectMem(size)
 
         # Status Queue
         # self.fetch_status = EntryFetchStatusQueue(size)

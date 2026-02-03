@@ -53,14 +53,14 @@ def gen_bpu_resp(bpu_ptr: CircularQueuePtr = None):
     port_dict_s3["ftq_idx_value"] = bpuPtr_sub2.value
 
     # Set redirect info not totally random
-    if random.random() < 0.2:
+    if random.random() < 0.5:
         port_dict_s2["valid_3"] = 1
         port_dict_s2["hasRedirect_3"] = 1
     else:
         port_dict_s2["valid_3"] = 0
         port_dict_s2["hasRedirect_3"] = 0
     
-    if random.random() < 0.2:
+    if random.random() < 0.5:
         port_dict_s3["valid_3"] = 1
         port_dict_s3["hasRedirect_3"] = 1
     else:
