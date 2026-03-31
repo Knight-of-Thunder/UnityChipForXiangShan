@@ -1,9 +1,9 @@
 from .FtqPtr import *
-# from .status_queue import *
-# from .ftb_entry_mem import *
+from .status_queue import *
+from .ftb_entry_mem import *
 from .ftq_pc_mem import *
 # from .ftq_pd_mem import *
-# from .ftq_meta_mem import *
+from .ftq_meta_mem import *
 from .ftq_redirect_mem import *
 
 FTQSIZE = 64
@@ -19,16 +19,21 @@ class FTQ:
         self.pf_ptr = CircularQueuePtr(flag=False, value=0)
 
         # FTQ Sub Queue
-        # self.ftb_entry_mem = FTBEntryMem(size)
+        self.ftb_entry_mem = FTBEntryMem(size)
         self.ftq_pc_mem = FTQPCMem(size)
         # self.ftq_pd_mem = FTQPDMem(size)
-        # self.meta_mem = FTQMeta1RSram(size)
+        self.ftq_meta_mem = FTQMeta1RSram(size)
         self.ftq_redirect_mem = FTQRedirectMem(size)
 
         # Status Queue
         # self.fetch_status = EntryFetchStatusQueue(size)
-        # self.update_targets = UpdateTargetQueue(size)
-        # self.cfi_indexes = CfiIndexVec(size)
+        self.update_targets = [0] * size 
+        self.cfiIndex_vec = [{"valid": 0, "bits": 0} for _ in range(size)]
+        self.mispredict_vecs = [[0 for _ in range(16)] for _ in range(size)]
+        self.pred_stages = [0] * size
+        self.commit_states = [0] * size
+        self.entry_fetch_status = [0] * size
+        self.entry_hit_status = [0] * size
         # self.mis_predicts = MispredictVec(size)
         # self.pred_stages = PredStageQueue(size)
         # self.commit_states = CommitStateQueue(size)

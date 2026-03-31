@@ -99,4 +99,4 @@ ENTRY_W = 576
 
 def get_entry(ram, idx):
     lo = idx * ENTRY_W
-    return (ram >> lo) & ((1 << ENTRY_W) - 1)
+    return (ram.value >> lo) & ((1 << ENTRY_W) - 1)

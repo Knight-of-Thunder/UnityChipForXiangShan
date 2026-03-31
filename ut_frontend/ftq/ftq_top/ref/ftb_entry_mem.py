@@ -1,35 +1,51 @@
 from dataclasses import dataclass
 from typing import List
 
+from ut_frontend.ftq.ftq_top.env.ftq_bundle import LastStageFtbEntryBundle
+
 # 配置
 PredictWidth = 16
 numBrSlot = 1
 
-@dataclass
-class FtbSlot:
-    offset: int    # UInt(log2Ceil(PredictWidth)) → 0~15
-    sharing: bool  # tailSlot 是否共享给分支
-    valid: bool    # 槽是否有效
+# @dataclass
+# class FtbSlot:
+#     offset: int    # UInt(log2Ceil(PredictWidth)) → 0~15
+#     sharing: bool  # tailSlot 是否共享给分支
+#     valid: bool    # 槽是否有效
 
 @dataclass
 class FTBEntry:
-    brSlots: List[FtbSlot]  # Vec(numBrSlot, ...)
-    tailSlot: FtbSlot
-    isCall: bool
-    isRet: bool
-    isJalr: bool
+    isCall : int = 0
+    isRet : int = 0
+    isJalr : int = 0
+    valid : int = 0
+    brSlots_0_offset : int = 0
+    brSlots_0_sharing : int = 0
+    brSlots_0_valid : int = 0
+    tailSlot_offset : int = 0
+    tailSlot_sharing : int = 0
+    tailSlot_valid : int = 0
 
     @classmethod
-    def default(cls):
-        """返回默认无效 entry"""
-        slots = [FtbSlot(0, False, False) for _ in range(numBrSlot)]
-        tail = FtbSlot(0, False, False)
-        return cls(slots, tail, False, False, False)
+    def from_last_stage_ftb_entry(cls, ftb: 'LastStageFtbEntryBundle'):
+        """从 LastStageFtbEntryBundle 构造 FTBEntry"""
+        return cls(
+            isCall = ftb.isCall.value,
+            isRet = ftb.isRet.value,
+            isJalr = ftb.isJalr.value,
+            valid = ftb.valid.value,
+            brSlots_0_offset = ftb.brSlots_0_offset.value,
+            brSlots_0_sharing = ftb.brSlots_0_sharing.value,
+            brSlots_0_valid = ftb.brSlots_0_valid.value,
+            tailSlot_offset = ftb.tailSlot_offset.value,
+            tailSlot_sharing = ftb.tailSlot_sharing.value,
+            tailSlot_valid = ftb.tailSlot_valid.value,
+        )
 
 class FTBEntryMem:
     def __init__(self, size: int = 64):
         self.size = size
-        self.mem = [FTBEntry.default() for _ in range(size)]
+        self.mem = [FTBEntry() for _ in range(size)]
 
     def write(self, wen: bool, waddr: int, wdata: FTBEntry):
         """写入：wen 有效且地址合法时写入"""
@@ -41,4 +57,4 @@ class FTBEntryMem:
         if 0 <= raddr < self.size:
             return self.mem[raddr]
         else:
-            return FTBEntry.default()
+            raise IndexError("FTBEntryMem read address out of range")

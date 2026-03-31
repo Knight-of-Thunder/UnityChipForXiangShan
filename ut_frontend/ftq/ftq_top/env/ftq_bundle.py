@@ -279,6 +279,68 @@ class BranchPredictionResp(Bundle):
 # class NewFromBpuBundle(Bundle):
 #     pred = BranchPredictionBundle.from_prefix("pred_")
 
+class toBpu_redirect(Bundle):
+    valid = Signal()
+    bits_level = Signal()
+    bits_cfiUpdate_pc = Signal()
+    bits_cfiUpdate_pd_valid = Signal()
+    bits_cfiUpdate_pd_isRVC = Signal()
+    bits_cfiUpdate_pd_isCall = Signal()
+    bits_cfiUpdate_pd_isRet = Signal()
+    bits_cfiUpdate_ssp = Signal()
+    bits_cfiUpdate_sctr = Signal()
+    bits_cfiUpdate_TOSW_flag = Signal()
+    bits_cfiUpdate_TOSW_value = Signal()
+    bits_cfiUpdate_TOSR_flag = Signal()
+    bits_cfiUpdate_TOSR_value = Signal()
+    bits_cfiUpdate_NOS_flag = Signal()
+    bits_cfiUpdate_NOS_value = Signal()
+    bits_cfiUpdate_histPtr_flag = Signal()
+    bits_cfiUpdate_histPtr_value = Signal()
+    bits_cfiUpdate_br_hit = Signal()
+    bits_cfiUpdate_jr_hit = Signal()
+    bits_cfiUpdate_sc_hit = Signal()
+    bits_cfiUpdate_target = Signal()
+    bits_cfiUpdate_taken = Signal()
+    bits_cfiUpdate_shift = Signal()
+    bits_cfiUpdate_addIntoHist = Signal()
+    bits_debugIsCtrl = Signal()
+    bits_debugIsMemVio = Signal()
+    bits_BTBMissBubble = Signal()
+
+
+class toBpu_update(Bundle):
+    valid = Signal()
+    bits_pc = Signal()
+
+    # spec info (provides bits_spec_info_histPtr_value etc.)
+    bits_spec_info_histPtr_value = Signal()
+
+    # ftb entry (provides bits_ftb_entry_* fields)
+    bits_ftb_entry = LastStageFtbEntryBundle.from_prefix("bits_ftb_entry_")
+
+    bits_cfi_idx_valid = Signal()
+    bits_cfi_idx_bits = Signal()
+
+    bits_br_taken_mask_0 = Signal()
+    bits_br_taken_mask_1 = Signal()
+    bits_jmp_taken = Signal()
+
+    bits_mispred_mask_0 = Signal()
+    bits_mispred_mask_1 = Signal()
+    bits_mispred_mask_2 = Signal()
+
+    bits_false_hit = Signal()
+    bits_old_entry = Signal()
+
+    bits_meta = Signal()
+    bits_full_target = Signal()
+
+
+class toBpu(Bundle):
+    redirect = toBpu_redirect.from_prefix("redirect_")
+    update = toBpu_update.from_prefix("update_")
+
 
 class FtqBundle(Bundle):
 
@@ -291,3 +353,4 @@ class FtqBundle(Bundle):
     toPrefetch = ToPrefetchBundle.from_prefix("toPrefetch_")  
 
     fromBpuNew = BranchPredictionResp.from_prefix("fromBpu_resp_")
+    toBpu = toBpu.from_prefix("toBpu_")

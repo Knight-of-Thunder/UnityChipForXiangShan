@@ -75,7 +75,7 @@ class CircularQueuePtr:
             # 合成 full pointer
             combined = ((1 if self.flag else 0) << value_width) | self.value
 
-            # ⭐ 关键修复：加完以后取模
+            #  关键修复：加完以后取模
             new_combined = (combined + v) & mask
 
             # 拆回 flag / value
