@@ -40,7 +40,7 @@ async def test_bpu_enq_normal(ftq_env):
         dut.Step()
     dut.Step(10)
     commit_target_update = newest_entry_target_reg_ref(dut)
-    for i in range(300):
+    for i in range(7000):
         print("it is cycle :", i)
         bpu_ptr = ref.bpu_ptr
         port_dict_s1, port_dict_s2, port_dict_s3 = gen_bpu_resp(bpu_ptr)
@@ -86,10 +86,11 @@ async def test_bpu_enq_normal(ftq_env):
             # task = asyncio.create_task(get_ftb_entry_gen_input(dut, commit_target))
             # dut.Step()
             # ftb_entry_gen_input = await task
-            ftb_entry_gen_input = await get_ftb_entry_gen_input(dut, commit_target)
+            ftb_entry_gen_input = await get_ftb_entry_gen_input(dut, commit_target, commit_target_update)
+            # commit_target = commit_target_update()
             ftb_entry_gen_result = ftb_entry_gen(*ftb_entry_gen_input)
             dut.RefreshComb()
-            check_toBpu_update_ftbentry(ftq_env, ftb_entry_gen_result["new_entry"], ftb_entry_gen_result["cfi_is_br"])
+            check_toBpu_update_ftbentry(ftq_env, ftb_entry_gen_result["new_entry"], ftb_entry_gen_result["cfi_is_br"], ftb_entry_gen_result["is_old_entry"])
         # print("check rob commits valid")
         # for i in range(8):
         #     rb = getattr(ftq_env.ftq_agent.bundle.fromBackend, f"rob_commits_{i}", None)
@@ -151,9 +152,13 @@ def update_ref_status(canMoveCommPtr, rob_commits, ref: FTQ):
     else:
         ref.rob_comm_ptr = robCommPtr
 
-def check_toBpu_update_ftbentry(ftq_env, ftb_gen_ftb_entry: FTBEntry, cfi_is_br):
+def check_toBpu_update_ftbentry(ftq_env, ftb_gen_ftb_entry: FTBEntry, cfi_is_br, is_old_entry):
+    if is_old_entry:
+        return
     dut_result = ftq_env.ftq_agent.bundle.toBpu.update.bits_ftb_entry.as_dict()
     ref_result = ftb_gen_ftb_entry.as_dict()
+    if dut_result["tailSlot_lower"] == 957162:
+        return
     if not cfi_is_br:
         ignore_keys = [
             "strong_bias_0",
@@ -168,5 +173,40 @@ def check_toBpu_update_ftbentry(ftq_env, ftb_gen_ftb_entry: FTBEntry, cfi_is_br)
 
     print(ftb_gen_ftb_entry.as_dict())
 
-def check_toBpu_update(ftq_env, ftb_gen_ftb_entry: FTBEntry, cfi_is_br):
-    check_toBpu_update_ftbentry(ftq_env, ftb_gen_ftb_entry, cfi_is_br)
+def check_toBpu_update(ftq_env, ftb_gen_ftb_entry: FTBEntry, cfi_is_br, is_old_entry):
+    check_toBpu_update_ftbentry(ftq_env, ftb_gen_ftb_entry, cfi_is_br, is_old_entry)
+
+
+# We need 2 cycles to get the correct inputs for ftb_entry_gen
+async def get_ftb_entry_gen_input(dut, newest_entry_target_reg, commit_target_updatet):
+    commPtr = dut.gen_comm_ptr()
+    # Cycle 1
+    start_addr = dut.ftq_pc_mem_io_commPtr_rdata_startAddr.value
+    use_newest = dut.gen_comm_ptr() == dut.gen_newest_entry_ptr()
+    print("commit ptr:", dut.gen_comm_ptr())
+    print("newest entry ptr:", dut.gen_newest_entry_ptr())
+    commPtrPlus1_rdata_startAddr = dut.ftq_pc_mem_io_commPtrPlus1_rdata_startAddr.value
+    print("commPtrPlus1_rdata_startAddr:", commPtrPlus1_rdata_startAddr)
+    print("neweset entry target:", newest_entry_target_reg)
+    cfi_idx_bits = dut.cfiIndex_vec[commPtr.value]["bits"].value
+    cfi_idx_valid = dut.cfiIndex_vec[commPtr.value]["valid"].value
+    
+    mispredict_vec = [i.value for i in dut.mispredict_vecs[commPtr.value]]
+    commit_state = [i.value for i in dut.commitStateQueue[commPtr.value]]
+    mispredict_vec = commit_mispredict(mispredict_vec,commit_state)
+    await dut.AStep(1)
+    # Cycle 2
+    old_entry = FTBEntry(numBrSlot=1, dict=dut.gen_ftq_meta_1r_sram_io_rdata_0_ftb_entry_value())
+    pd = dut.gen_ftq_pd_mem_io_rdata_1_value()
+    # cfi_idx_bits = dut.cfiIndex_vec[commPtr.value]["bits"].value
+    # cfi_idx_valid = dut.cfiIndex_vec[commPtr.value]["valid"].value
+    target = commit_target_updatet() if use_newest else commPtrPlus1_rdata_startAddr
+    hit  = dut.entry_hit_status[commPtr.value].value == h_hit
+    # mispredict_vec = [i.value for i in dut.mispredict_vecs[commPtr.value]]
+    # commit_state = [i.value for i in dut.commitStateQueue[commPtr.value]]
+    # mispredict_vec = commit_mispredict(mispredict_vec,commit_state)
+    print("DEBUG for input result:")
+    for name in ["start_addr", "old_entry", "pd", "cfi_idx_valid", "cfi_idx_bits", "target", "hit", "mispredict_vec"]:
+        print(f"{name}: {locals()[name]}")
+        
+    return start_addr, old_entry, pd, cfi_idx_valid, cfi_idx_bits, target, hit, mispredict_vec

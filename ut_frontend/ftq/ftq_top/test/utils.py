@@ -507,6 +507,40 @@ class FtbSlot:
         
         self.tarStat = stat
         self.sharing = int(is_share)
+
+    # def set_lower_stat_by_target(self, pc, target, is_share):
+    #     # 1. 确定 offLen
+    #     offLen = self.subOffsetLen if is_share else self.offsetLen
+    #     VAddrBits = 50
+    #     shift_amt = offLen + 1
+        
+    #     # 2. 提取 Higher 部分 (对应 pc(VAddrBits-1, offLen+1))
+    #     # 这里的 mask 位数必须严格等于 VAddrBits - 1 - (offLen + 1) + 1
+    #     higher_len = VAddrBits - shift_amt
+    #     higher_mask = (1 << higher_len) - 1
+        
+    #     pc_higher = (pc >> shift_amt) & higher_mask
+    #     target_higher = (target >> shift_amt) & higher_mask
+
+    #     # 3. 比较状态
+    #     if target_higher > pc_higher:
+    #         stat = TAR_OVF
+    #     elif target_higher < pc_higher:
+    #         stat = TAR_UDF
+    #     else:
+    #         stat = TAR_FIT
+
+    #     # 4. 提取 Lower 部分 (对应 target(offLen, 1))
+    #     # 注意：Chisel 的 (msb, lsb) 是包含边界的
+    #     # target(offLen, 1) 表示提取 offLen - 1 + 1 = offLen 位
+    #     lower_mask = (1 << offLen) - 1
+    #     raw_lower = (target >> 1) & lower_mask
+
+    #     # 5. ZeroExt 扩展到 self.offsetLen 位
+    #     # 确保 raw_lower 放入 self.lower 时符合硬件位宽
+    #     self.lower = raw_lower & ((1 << self.offsetLen) - 1)# Python 整数不限位宽，但在对比信号时需要注意 mask
+    #     self.tarStat = stat
+    #     self.sharing = int(is_share)
     
     # --------------------------------------
     # getTarget 
@@ -887,32 +921,79 @@ def ftb_entry_gen(
     pft_need_to_change = is_new_br and may_have_to_replace
 
     ############### notice ###########################
+    # if pft_need_to_change:
+    #     print("pft need to change", pft_need_to_change)
+    #     #  new_pft_offset
+    #     # Chisel: Mux(!new_br_insert_onehot.asUInt.orR, new_br_offset, oe.allSlotsForBr.last.offset)
+    #     if not any(new_br_insert_onehot):
+    #         # 新br应该插入到所有现有br之后 → pft用新br的offset
+    #         new_pft_offset = new_br_offset
+    #     else:
+    #         # 新br插入到某个现有br之前 → pft用原来最后一个br的offset
+    #         new_pft_offset = oe.brSlots[-1].offset
+        
+    #     # ── 更新 pftAddr 和 carry ──
+    #     base_lower = get_lower(start_addr)
+    #     new_pft_addr = base_lower + new_pft_offset
+    #     print("new_pft_addr:", new_pft_addr)
+    #     old_entry_modified.pftAddr = new_pft_addr
+        
+    #     # carry = (base_lower +& new_pft_offset) 的最高位
+    #     # 即检查加法结果是否超出了 (carryPos - instOffsetBits) 位表示范围
+    #     addr_bits = carryPos - instOffsetBits
+    #     old_entry_modified.carry = (new_pft_addr >> addr_bits) & 1 != 0
+        
+    #     # ── 清空 jmp 相关标志（因为pft现在指向branch而非jmp）─
+    #     old_entry_modified.last_may_be_rvi_call = False
+    #     old_entry_modified.isCall = False
+    #     old_entry_modified.isRet = False
+    #     old_entry_modified.isJalr = False
+
     if pft_need_to_change:
-        #  new_pft_offset
-        # Chisel: Mux(!new_br_insert_onehot.asUInt.orR, new_br_offset, oe.allSlotsForBr.last.offset)
+        print(f"[DEBUG] pft_need_to_change triggered: {pft_need_to_change}")
+
+        # 1. 选择 new_pft_offset (对应 Chisel 的 Mux 逻辑)
+        # 如果 new_br_insert_onehot 全为 0 (orR 为 false)，说明新分支插入在末尾
         if not any(new_br_insert_onehot):
-            # 新br应该插入到所有现有br之后 → pft用新br的offset
             new_pft_offset = new_br_offset
         else:
-            # 新br插入到某个现有br之前 → pft用原来最后一个br的offset
+            # 否则，PFT 指向原本的最后一个分支
             new_pft_offset = oe.brSlots[-1].offset
+
+        # 2. 模拟硬件位宽截断 (Crucial for Bit-level Accuracy)
+        # 在 FTQ 中，pftAddr 的位宽通常由 carryPos - instOffsetBits 决定
+        lower_width = carryPos - instOffsetBits
+        mask = (1 << lower_width) - 1
+
+        # 获取 base_lower 并确保它符合硬件截断后的位宽
+        base_lower = get_lower(start_addr) & mask
         
-        # ── 更新 pftAddr 和 carry ──
-        base_lower = get_lower(start_addr)
-        new_pft_addr = base_lower + new_pft_offset
+        # 确保 offset 也在有效范围内 (通常 offset 位宽较小)
+        pft_off = new_pft_offset & mask
+
+        # 3. 模拟 Chisel 的 +& 操作 (带有进位的加法)
+        # Chisel: (getLower +& new_pft_offset)
+        # 结果会比输入多 1 位，最高位即为 carry
+        full_sum = base_lower + pft_off
         
+        # 提取低位作为 pftAddr
+        new_pft_addr = full_sum & mask
+        
+        # 提取第 lower_width 位作为进位 (MSB)
+        # 例如 lower_width=12，则检查第 12 位 (从0开始数) 是否为 1
+        carry_bit = (full_sum >> lower_width) & 1
+
+        # 4. 更新 Entry 状态
         old_entry_modified.pftAddr = new_pft_addr
-        
-        # carry = (base_lower +& new_pft_offset) 的最高位
-        # 即检查加法结果是否超出了 (carryPos - instOffsetBits) 位表示范围
-        addr_bits = carryPos - instOffsetBits
-        old_entry_modified.carry = (new_pft_addr >> addr_bits) & 1 != 0
-        
-        # ── 清空 jmp 相关标志（因为pft现在指向branch而非jmp）─
+        old_entry_modified.carry = bool(carry_bit)
+
+        # 5. 清空 JMP 相关标志位 (PFT 现在指向的是 Branch 后的地址)
         old_entry_modified.last_may_be_rvi_call = False
         old_entry_modified.isCall = False
         old_entry_modified.isRet = False
         old_entry_modified.isJalr = False
+
+        print(f"[DEBUG] New PFT Addr: {hex(new_pft_addr)}, Carry: {old_entry_modified.carry}")
     # ------------------------------------------------
     # 3 jalr target modify
     # ------------------------------------------------
@@ -1040,33 +1121,36 @@ def commit_mispredict(
         for m, state in zip(mis, commit_state)
     ]
 
-# We need 2 cycles to get the correct inputs for ftb_entry_gen
-async def get_ftb_entry_gen_input(dut, newest_entry_target_reg):
-    commPtr = dut.gen_comm_ptr()
-    # Cycle 1
-    start_addr = dut.ftq_pc_mem_io_commPtr_rdata_startAddr.value
-    use_newest = dut.gen_comm_ptr() == dut.gen_newest_entry_ptr()
-    commPtrPlus1_rdata_startAddr = dut.ftq_pc_mem_io_commPtrPlus1_rdata_startAddr.value
-    cfi_idx_bits = dut.cfiIndex_vec[commPtr.value]["bits"].value
-    cfi_idx_valid = dut.cfiIndex_vec[commPtr.value]["valid"].value
+# # We need 2 cycles to get the correct inputs for ftb_entry_gen
+# async def get_ftb_entry_gen_input(dut, newest_entry_target_reg):
+#     commPtr = dut.gen_comm_ptr()
+#     # Cycle 1
+#     start_addr = dut.ftq_pc_mem_io_commPtr_rdata_startAddr.value
+#     use_newest = dut.gen_comm_ptr() == dut.gen_newest_entry_ptr()
+#     print("commit ptr:", dut.gen_comm_ptr())
+#     print("newest entry ptr:", dut.gen_newest_entry_ptr())
+#     commPtrPlus1_rdata_startAddr = dut.ftq_pc_mem_io_commPtrPlus1_rdata_startAddr.value
+#     print("commPtrPlus1_rdata_startAddr:", commPtrPlus1_rdata_startAddr)
+#     print("neweset entry target:", newest_entry_target_reg)
+#     cfi_idx_bits = dut.cfiIndex_vec[commPtr.value]["bits"].value
+#     cfi_idx_valid = dut.cfiIndex_vec[commPtr.value]["valid"].value
     
-    mispredict_vec = [i.value for i in dut.mispredict_vecs[commPtr.value]]
-    commit_state = [i.value for i in dut.commitStateQueue[commPtr.value]]
-    mispredict_vec = commit_mispredict(mispredict_vec,commit_state)
-    await dut.AStep(1)
-    # Cycle 2
-    old_entry = FTBEntry(numBrSlot=1, dict=dut.gen_ftq_meta_1r_sram_io_rdata_0_ftb_entry_value())
-    pd = dut.gen_ftq_pd_mem_io_rdata_1_value()
-    # cfi_idx_bits = dut.cfiIndex_vec[commPtr.value]["bits"].value
-    # cfi_idx_valid = dut.cfiIndex_vec[commPtr.value]["valid"].value
- 
-    target = newest_entry_target_reg if use_newest else commPtrPlus1_rdata_startAddr
-    hit  = dut.entry_hit_status[commPtr.value].value == h_hit
-    # mispredict_vec = [i.value for i in dut.mispredict_vecs[commPtr.value]]
-    # commit_state = [i.value for i in dut.commitStateQueue[commPtr.value]]
-    # mispredict_vec = commit_mispredict(mispredict_vec,commit_state)
-    print("DEBUG for input result:")
-    for name in ["start_addr", "old_entry", "pd", "cfi_idx_valid", "cfi_idx_bits", "target", "hit", "mispredict_vec"]:
-        print(f"{name}: {locals()[name]}")
+#     mispredict_vec = [i.value for i in dut.mispredict_vecs[commPtr.value]]
+#     commit_state = [i.value for i in dut.commitStateQueue[commPtr.value]]
+#     mispredict_vec = commit_mispredict(mispredict_vec,commit_state)
+#     await dut.AStep(1)
+#     # Cycle 2
+#     old_entry = FTBEntry(numBrSlot=1, dict=dut.gen_ftq_meta_1r_sram_io_rdata_0_ftb_entry_value())
+#     pd = dut.gen_ftq_pd_mem_io_rdata_1_value()
+#     # cfi_idx_bits = dut.cfiIndex_vec[commPtr.value]["bits"].value
+#     # cfi_idx_valid = dut.cfiIndex_vec[commPtr.value]["valid"].value
+#     target = newest_entry_target_reg if use_newest else commPtrPlus1_rdata_startAddr
+#     hit  = dut.entry_hit_status[commPtr.value].value == h_hit
+#     # mispredict_vec = [i.value for i in dut.mispredict_vecs[commPtr.value]]
+#     # commit_state = [i.value for i in dut.commitStateQueue[commPtr.value]]
+#     # mispredict_vec = commit_mispredict(mispredict_vec,commit_state)
+#     print("DEBUG for input result:")
+#     for name in ["start_addr", "old_entry", "pd", "cfi_idx_valid", "cfi_idx_bits", "target", "hit", "mispredict_vec"]:
+#         print(f"{name}: {locals()[name]}")
         
-    return start_addr, old_entry, pd, cfi_idx_valid, cfi_idx_bits, target, hit, mispredict_vec
+#     return start_addr, old_entry, pd, cfi_idx_valid, cfi_idx_bits, target, hit, mispredict_vec

@@ -365,7 +365,7 @@ class NewDUTFtqTop(DUTFtqTop):
 
     def gen_newest_entry_ptr(self) -> CircularQueuePtr:
         """生成一个指向最新条目的指针"""
-        return CircularQueuePtr(FTQSIZE, self.newest_entry_ptr_value.value, self.newest_entry_ptr_flag.value)  # 假设最新条目指针没有flag位
+        return CircularQueuePtr(FTQSIZE, self.newest_entry_ptr_flag.value, self.newest_entry_ptr_value.value)  # 假设最新条目指针没有flag位
 
     def valid_entries(self) -> int:
         """计算FTQ中有效条目数"""
