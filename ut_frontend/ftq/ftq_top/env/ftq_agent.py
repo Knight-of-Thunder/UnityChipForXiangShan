@@ -642,31 +642,6 @@ class FtqAgent(Agent):
     async def drive_last_stage_meta_signals(self):
         self.bundle.fromBpuNew.last_stage_meta.last_stage_meta.value = random.randint(0, (1 << 516) - 1)
 
-    # # allowBpuIn := !ifuFlush && !backendRedirect.valid && !backendRedirectReg.valid
-    # # ifuFlush := fromIfuRedirect.valid || ifuRedirectToBpu.valid, 
-    # # 其中ifuRedirectToBpu实际上是前者的寄存器版本，保留上一周期前者的值，所以ifuFlush实际是将来自ifu的flush保留两个周期
-    # # fromIfuRedirect.valid              := pdWb.valid && pdWb.bits.misOffset.valid && !backendFlush
-    # # backendRedirect.valid := io.fromBackend.redirect.valid, backendFlush将backendRedirect保存两个周期
-    # # involved input pins:
-    # # io_fromIfu_pdWb_valid
-    # # io_fromIfu_pdWb_bits_misOffset_valid
-    # # io_fromBackend_redirect_valid
-    # def set_allow_bpu_in(dut):
-
-    # # The set will keep 2 cycles
-    # @driver_method()
-    # async def set_no_ifu_flush(self):
-
-
-    # @monitor_method()
-    # async def check_bpu_resp_valid_requirement(self):
-    #     dut = self.bundle._Bundle__dut_instance__
-    #     if dut.canCommit.value == 1 or dut.valid_entries() < FTQSIZE:
-    #         assert dut.io_fromBpu_resp_ready.value == 1
-    #     else:
-    #         assert dut.io_fromBpu_resp_ready.value == 0
-    #     return dut.io_fromBpu_resp_ready.value
-
     @driver_method()
     async def drive_backend_inputs_full(self, dict):
         b = self.bundle.fromBackend

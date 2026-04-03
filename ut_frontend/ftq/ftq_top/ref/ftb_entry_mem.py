@@ -3,15 +3,8 @@ from typing import List
 
 from ut_frontend.ftq.ftq_top.env.ftq_bundle import LastStageFtbEntryBundle
 
-# 配置
 PredictWidth = 16
 numBrSlot = 1
-
-# @dataclass
-# class FtbSlot:
-#     offset: int    # UInt(log2Ceil(PredictWidth)) → 0~15
-#     sharing: bool  # tailSlot 是否共享给分支
-#     valid: bool    # 槽是否有效
 
 @dataclass
 class FTBEntry:
@@ -28,7 +21,7 @@ class FTBEntry:
 
     @classmethod
     def from_last_stage_ftb_entry(cls, ftb: 'LastStageFtbEntryBundle'):
-        """从 LastStageFtbEntryBundle 构造 FTBEntry"""
+        """ Generate FTBEntry from LastStageFtbEntryBundle """
         return cls(
             isCall = ftb.isCall.value,
             isRet = ftb.isRet.value,
@@ -48,12 +41,10 @@ class FTBEntryMem:
         self.mem = [FTBEntry() for _ in range(size)]
 
     def write(self, wen: bool, waddr: int, wdata: FTBEntry):
-        """写入：wen 有效且地址合法时写入"""
         if wen and 0 <= waddr < self.size:
             self.mem[waddr] = wdata
 
     def read(self, raddr: int) -> FTBEntry:
-        """读取：直接返回地址对应 entry"""
         if 0 <= raddr < self.size:
             return self.mem[raddr]
         else:

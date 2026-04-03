@@ -6,10 +6,10 @@ from ut_frontend.ftq.ftq_top.env.ftq_bundle import LastStageFtbEntryBundle
 @dataclass
 class FtbSlot:
     offset: int    # UInt(log2Ceil(PredictWidth)) → 0~15
-    sharing: int  # tailSlot 是否共享给分支
-    valid: int    # 槽是否有效
-    lower: int = 0  # 未使用字段，保留
-    tarStat: int = 0  # 未使用字段，保留
+    sharing: int
+    valid: int
+    lower: int = 0
+    tarStat: int = 0
 
 @dataclass
 class Full_FTBEntry:
@@ -62,8 +62,8 @@ class Full_FTBEntry:
 
 @dataclass
 class Ftq_1R_SRAMEntry:
-    meta: int                 # UInt(MaxMetaLength.W) → 用 int 表示
-    ftb_entry: Full_FTBEntry  # 复用之前定义的 FTBEntry
+    meta: int
+    ftb_entry: Full_FTBEntry
 
     @classmethod
     def default(cls):

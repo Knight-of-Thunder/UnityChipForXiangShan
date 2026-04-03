@@ -28,35 +28,6 @@ class CircularQueuePtr:
     def __ne__(self, other: 'CircularQueuePtr') -> bool:
         return not self.__eq__(other)
 
-    # def __add__(self, v: int) -> 'CircularQueuePtr':
-    #     if v < 0:
-    #         raise ValueError("v must be non-negative")
-    #     entries = self.entries
-    #     if is_pow2(entries):
-    #         # Combine flag and value into a wide integer
-    #         combined = ((1 if self.flag else 0) << (entries.bit_length() - 1)) | self.value
-    #         new_combined = combined + v
-    #         new_flag = bool(new_combined >> (entries.bit_length() - 1))
-    #         new_value = new_combined & ((1 << (entries.bit_length() - 1)) - 1)
-    #         # Wrap value if it exceeds entries (shouldn't happen if entries is pow2)
-    #         if new_value >= entries:
-    #             # This can occur due to carry beyond the value bits; adjust
-    #             # Actually, for pow2, value width = log2(entries), so max value = entries-1
-    #             # But addition may wrap within combined, so we mask correctly.
-    #             # Simpler: simulate bit-level wrap
-    #             new_flag ^= (new_value >> (entries.bit_length() - 1))
-    #             new_value &= (entries - 1)
-    #         return CircularQueuePtr(entries, new_flag, new_value)
-    #     else:
-    #         # Non-power-of-two case
-    #         new_value_raw = self.value + v
-    #         full_entries = entries
-    #         # Compute how many full wraps
-    #         wraps = new_value_raw // full_entries
-    #         new_value = new_value_raw % full_entries
-    #         new_flag = self.flag ^ (wraps % 2 == 1)
-    #         return CircularQueuePtr(entries, new_flag, new_value)
-
     def __add__(self, v: int) -> 'CircularQueuePtr':
         if v < 0:
             raise ValueError("v must be non-negative")
@@ -64,28 +35,21 @@ class CircularQueuePtr:
         entries = self.entries
 
         if is_pow2(entries):
-            # value 位宽 = log2(entries)
             value_width = entries.bit_length() - 1
-            # 总指针位宽 = value + flag
             ptr_width = value_width + 1
 
-            # mask 用来模拟“固定宽度寄存器”
             mask = (1 << ptr_width) - 1
 
-            # 合成 full pointer
             combined = ((1 if self.flag else 0) << value_width) | self.value
 
-            #  关键修复：加完以后取模
             new_combined = (combined + v) & mask
 
-            # 拆回 flag / value
             new_flag = bool(new_combined >> value_width)
             new_value = new_combined & (entries - 1)
 
             return CircularQueuePtr(entries, new_flag, new_value)
 
         else:
-            # Non-power-of-two case（你这部分本来就是对的）
             new_value_raw = self.value + v
             wraps = new_value_raw // entries
             new_value = new_value_raw % entries

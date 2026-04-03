@@ -1,17 +1,16 @@
-import random
 import toffee_test
+from ut_frontend.ftq.ftq_top.env.ftq_bundle import BranchPredictionResp, FromBpuBundle, FromIfuBundle, ToICacheBundle, ToIfuBundle, ToPrefetchBundle, toBpuBundle
 from ut_frontend.ftq.ftq_top.test.ftq_cover_points2 import *
 from ..env import FtqBundle
 from ..env import FtqEnv 
 import toffee
+from toffee import *
 
 from dut.FtqTop import DUTFtqTop
-import toffee.funcov as fc
-from toffee.funcov import CovGroup
 from .ftq_cover_points import ftq_cover_points
 
 from .utils import *
-from .utils2 import *
+
 
 class NewDUTFtqTop(DUTFtqTop):
     def __init__(self, *args, **kwargs):
@@ -61,27 +60,20 @@ class NewDUTFtqTop(DUTFtqTop):
         self.toifu_redirect_ftqOffset = self.GetInternalSignal("FtqTop_top.io_toIfu_redirect_bits_ftqOffset")
         self.toifu_redirect_level = self.GetInternalSignal("FtqTop_top.io_toIfu_redirect_bits_level")
 
-        # bins added
+
         self.canCommit = self.GetInternalSignal("FtqTop_top.Ftq.__Vtogcov__canCommit")
         self.comm_ptr = self.GetInternalSignal("FtqTop_top.Ftq.commPtr_value")
         self.comm_ptr_flag = self.GetInternalSignal("FtqTop_top.Ftq.commPtr_flag")
-        # self.fromBackend_redirect_valid = self.GetInternalSignal("FtqTop_top.Ftq.fromBackend_redirect_valid")
-        # self.backendRedirectReg_valid_REG = self.GetInternalSignal("FtqTop_top.Ftq.backendRedirectReg_valid_REG")
         self.backendRedirect = self.GetInternalSignal("FtqTop_top.io_fromBackend_redirect_valid")
         self.backendRedirectReg = self.GetInternalSignal("FtqTop_top.Ftq.backendRedirectReg_valid_REG")
         self.allowBpuIn = self.GetInternalSignal("FtqTop_top.Ftq.allowBpuIn")
         self.bpu_in_fire = self.GetInternalSignal("FtqTop_top.Ftq.bpu_in_fire")
         self.bpu_in_stage = self.GetInternalSignal("FtqTop_top.Ftq.bpu_in_stage")
-        # self.io_fromBpu_resp_bits_s3_hasRedirect_3 = self.GetInternalSignal("FtqTop_top.io_fromBpu_resp_bits_s3_hasRedirect_3")
-        # self.io_fromBpu_resp_bits_s2_hasRedirect_3 = self.GetInternalSignal("FtqTop_top.io_fromBpu_resp_bits_s2_hasRedirect_3")
-        # self.io_fromBpu_resp_bits_s2_valid_3 = self.GetInternalSignal("FtqTop_top.io_fromBpu_resp_bits_s2_valid_3")
-        # self.io_fromBpu_resp_bits_s3_valid_3 = self.GetInternalSignal("FtqTop_top.io_fromBpu_resp_bits_s3_valid_3")
         self.ifuRedirectToBpu_valid = self.GetInternalSignal("FtqTop_top.Ftq.ifuRedirectReg_next_valid_last_REG") 
         self.ifu_wb_ptr = self.GetInternalSignal("FtqTop_top.Ftq.ifuWbPtr_value")      
         self.ifu_wb_ptr_flag = self.GetInternalSignal("FtqTop_top.Ftq.ifuWbPtr_flag") 
         self.robCommPtr_flag = self.GetInternalSignal("FtqTop_top.Ftq.robCommPtr_flag")
         self.robCommPtr_value = self.GetInternalSignal("FtqTop_top.Ftq.robCommPtr_value")
-
         self.mmioFtqPtr_flag = self.GetInternalSignal("FtqTop_top.io_mmioCommitRead_mmioFtqPtr_flag")
         self.mmioFtqPtr_value = self.GetInternalSignal("FtqTop_top.io_mmioCommitRead_mmioFtqPtr_value")
         self.mmioLastCommit = self.GetInternalSignal("FtqTop_top.io_mmioCommitRead_mmioLastCommit")
@@ -109,13 +101,16 @@ class NewDUTFtqTop(DUTFtqTop):
         self.get_cfi_index_valid = get_cfi_index_valid
         self.get_mispredict_vec = get_mispredict_vec
         self.get_commit_state_queue_reg = get_commit_state_queue_reg
-
         self.ftq_pc_mem_io_commPtrPlus1_rdata_startAddr = self.GetInternalSignal("FtqTop_top.Ftq._ftq_pc_mem_io_commPtrPlus1_rdata_startAddr")
         self.ftq_pc_mem_io_commPtr_rdata_startAddr = self.GetInternalSignal("FtqTop_top.Ftq._ftq_pc_mem_io_commPtr_rdata_startAddr")
   
 
          
-        ################################ Connected to FTQ SUB QUEUES ##############################################
+
+        #=================================================
+        #      Connected to FTQ SUB QUEUES 
+        #=================================================
+        
         # ftq_pc_mem
         self.ftq_pc_mem = [
             {} for _ in range(64)
@@ -218,29 +213,9 @@ class NewDUTFtqTop(DUTFtqTop):
             # self.ftb_entry_mem[waddr]["tailSlot"]["valid"] = \
             #     self.GetInternalSignal(f"{base}_tailSlot_valid")
 
-        # ftq_meta_mem
-        # 64 x 576 flatten ram， each 576 bit entry holds meta and ftb_entry info
-        # ram = self.GetInternalSignal(
-        #     "FtqTop_top.Ftq.ftq_meta_1r_sram.sram.array.array.array_8_ext.ram"
-        # )
-        # print(f"DEBUG: RAM total bits = {ram.value.bit_length()}")
-        # self.ftq_meta_mem = [ FtqMetaEntry() for _ in range(64)]
-
-        # # for i in range(64):
-        # #     raw_entry = get_entry(ram, i)
-        # #     self.ftq_meta_mem[i] = unpack_ftq_meta(raw_entry)
-        # ram_path = "FtqTop_top.Ftq.ftq_meta_1r_sram.sram.array.array.array_8_ext.ram"
-        # for i in range(64):
-        #     # 核心修改：在路径字符串里加上索引 [{i}]
-        #     line_signal = self.GetInternalSignal(f"{ram_path}[{i}]")
-        #     if line_signal is not None:
-        #         raw_val = line_signal.value
-        #         self.ftq_meta_mem[i] = unpack_ftq_meta(raw_val)
-        #     else:
-        #         # 如果这种写法报错，说明接口需要不同的数组访问方式
-        #         print(f"Error: Cannot access index {i}")
-
-        # ################################ Connected to FTQ STATUS QUEUES ##############################################
+        #=================================================
+        #      Connected to FTQ STATUS QUEUES 
+        #=================================================
         self.update_targets = [None] * 64
         for i in range(64): 
             self.update_targets[i] = self.GetInternalSignal(f"FtqTop_top.Ftq.update_target_{i}")
@@ -318,73 +293,45 @@ class NewDUTFtqTop(DUTFtqTop):
         self.ftq_pd_mem_io_rdata_1["jmpOffset"] = self.GetInternalSignal(f"FtqTop_top.Ftq.ftq_pd_mem.__Vtogcov__io_rdata_1_jmpOffset")
         self.ftq_pd_mem_io_rdata_1["jalTarget"] = self.GetInternalSignal(f"FtqTop_top.Ftq.ftq_pd_mem.__Vtogcov__io_rdata_1_jalTarget")
         self._ftq_pd_mem_io_rdata_1_jalTarget = self.GetInternalSignal(f"FtqTop_top.Ftq._ftq_pd_mem_io_rdata_1_jalTarget")
-
-
-    # def distance_between_bpu_and_commit(self):
-    #     return distance_between(enq_flag = self.bpu_ptr_flag.value, enq_value = self.bpu_ptr.value, deq_flag = self.comm_ptr_flag.value, deq_value = self.comm_ptr.value)
-    
-        # The pins need in cover_points
         self.fromIfuRedirect_valid_probe = self.GetInternalSignal("FtqTop_top.Ftq.fromIfuRedirect_valid_probe")
-        
         self.realAhdValid = self.GetInternalSignal("FtqTop_top.Ftq.realAhdValid")
-        # self.io_fromBackend_redirect_valid = self.backendRedirect.value
-        # self.backendRedirectReg_valid_REG = self.GetInternalSignal("FtqTop_top.Ftq.backendRedirectReg_valid_REG").value
         self.ftb_entry_gen_io_is_br_full = self.GetInternalSignal("FtqTop_top.Ftq._FTBEntryGen_io_is_br_full")
         self.ftb_entry_gen_io_is_jalr_target_modified = self.GetInternalSignal("FtqTop_top.Ftq._FTBEntryGen_io_is_jalr_target_modified")
         self.ftb_entry_gen_io_is_new_br = self.GetInternalSignal("FtqTop_top.Ftq._FTBEntryGen_io_is_new_br")
         self.ftb_entry_gen_io_is_strong_bias_modified = self.GetInternalSignal("FtqTop_top.Ftq._FTBEntryGen_io_is_strong_bias_modified")
-
+        
+    #=================================================
+    #      Generate different kinds of FTQ Pointers
+    #=================================================
 
     def gen_bpu_ptr(self) -> CircularQueuePtr:
-        """生成一个BPU指针"""
         return CircularQueuePtr(FTQSIZE, self.bpu_ptr_flag.value, self.bpu_ptr.value)
     
     def gen_ifu_ptr(self) -> CircularQueuePtr:
-        """生成一个IFU指针"""
         return CircularQueuePtr(FTQSIZE, self.ifu_ptr_flag.value, self.ifu_ptr.value)
     
     def gen_pf_ptr(self) -> CircularQueuePtr:
-        """生成一个PF指针"""
         return CircularQueuePtr(FTQSIZE, self.pf_ptr_flag.value, self.pf_ptr.value)
     
     def gen_comm_ptr(self) -> CircularQueuePtr:
-        """生成一个COMM指针"""
         return CircularQueuePtr(FTQSIZE, self.comm_ptr_flag.value, self.comm_ptr.value)
     
     def gen_ifu_wb_ptr(self) -> CircularQueuePtr:
-        """生成一个IFU写回指针"""
         return CircularQueuePtr(FTQSIZE, self.ifu_wb_ptr_flag.value, self.ifu_wb_ptr.value)
     
     def gen_rob_comm_ptr(self) -> CircularQueuePtr:
-        """生成一个ROB提交指针"""
         return CircularQueuePtr(FTQSIZE, self.robCommPtr_flag.value, self.robCommPtr_value.value)
     
     def gen_mmio_ftq_ptr(self) -> CircularQueuePtr:
-        """生成一个MMIO FTQ指针"""
         return CircularQueuePtr(FTQSIZE, self.mmioFtqPtr_flag.value, self.mmioFtqPtr_value.value)
 
     def gen_newest_entry_ptr(self) -> CircularQueuePtr:
-        """生成一个指向最新条目的指针"""
-        return CircularQueuePtr(FTQSIZE, self.newest_entry_ptr_flag.value, self.newest_entry_ptr_value.value)  # 假设最新条目指针没有flag位
+        return CircularQueuePtr(FTQSIZE, self.newest_entry_ptr_flag.value, self.newest_entry_ptr_value.value)
 
     def valid_entries(self) -> int:
-        """计算FTQ中有效条目数"""
         return distance_between(self.gen_bpu_ptr(), self.gen_comm_ptr())
-    
-    # def fromBpu_resp_ready(self) -> bool:
-    #     """判断从BPU获取响应是否就绪"""
-    #     return self.GetInternalSignal("FtqTop_top.Ftq.fromBpu_resp_ready").value
 
-    # def verify_allow_bpu_in(self) -> bool:
-    #     """判断是否允许BPU入队"""
-    #     return (not self.ifu_flush.value) and (not self.backendRedirectReg_valid_REG.value) or (not self.toBackend_redirect_valid.value)
-
-    # def verify_bpu_in_fire(self) -> bool:
-    #     """判断BPU入队是否触发"""
-    #     return self.bpu_in_fire.value
-
-    # allow_to_ifu = allow_bpu_in
-    
+    # These are helper functions when we want value list easily
     def gen_ftq_meta_1r_sram_io_rdata_0_ftb_entry_value(self):
         ftq_meta_1r_sram_io_rdata_0_ftb_entry_value = {
             k: v.value for k, v in self.ftq_meta_1r_sram_io_rdata_0_ftb_entry.items()
@@ -400,15 +347,65 @@ class NewDUTFtqTop(DUTFtqTop):
 
 
 
+# @toffee_test.fixture
+# async def ftq_env(toffee_request: toffee_test.ToffeeRequest):
+#     toffee.setup_logging(toffee.WARNING)
+#     dut = toffee_request.create_dut(NewDUTFtqTop,"clock")  
+#     toffee.start_clock(dut)
+#     ftq_bundle = FtqBundle.from_prefix('io_')
+#     ftq_bundle.bind(dut)  
+#     testcase_name = toffee_request.request.node.name
+#     print(f"current test case: {testcase_name}")
+#     toffee_request.add_cov_groups(ftq_cover_points(dut, ftq_bundle))  
+
+#     # For test_ftq_top10
+#     toffee_request.add_cov_groups([
+#         to_bpu_redirect(dut),
+#         update_stall(dut),
+#         can_commit(dut),
+#         can_move_commit_ptr(dut),
+#         update_rob_commit_ptr(ftq_bundle.fromBackend),
+#         mmio_last_commit(dut),
+#         ftb_entry_gen_modify_old(dut),
+#         update_ftb_entry(dut),
+#     ])
+#     # For test_ftq_top1
+#     toffee_request.add_cov_groups([
+#         ftq_get_bpu_resp_ready(dut),
+#         bpu_resp_valid(dut),
+#         bpu_in_fire(dut),
+#         not_allow_BPU_in(dut),
+#         allow_BPU_in_when_resp_redirect(dut),
+#         transfer_flush_to_IFU(dut),
+#         transfer_flush_to_Prefetch(dut),
+#     ])
+#     yield FtqEnv(ftq_bundle, dut=dut)  
+   
 @toffee_test.fixture
 async def ftq_env(toffee_request: toffee_test.ToffeeRequest):
     toffee.setup_logging(toffee.WARNING)
     dut = toffee_request.create_dut(NewDUTFtqTop,"clock")  
     toffee.start_clock(dut)
-    ftq_bundle = FtqBundle.from_prefix('io_')
-    ftq_bundle.bind(dut)  
+    testcase_name = toffee_request.request.node.name
+    print(f"current test case: {testcase_name}")
+    class FtqBundleDynamic(Bundle):
+        fromBackend = FromBackendBundle.from_prefix("fromBackend_")
+        fromIfu = FromIfuBundle.from_prefix("fromIfu_")
+        toIfu = ToIfuBundle.from_prefix("toIfu_")
+        toICache = ToICacheBundle.from_prefix("toICache_")
+        toPrefetch = ToPrefetchBundle.from_prefix("toPrefetch_")
+        toBpu = toBpuBundle.from_prefix("toBpu_")
+
+        if testcase_name in ["test_bpu_enqueue", "test_commit_to_bpu"]:
+            fromBpuNew = BranchPredictionResp.from_prefix("fromBpu_resp_")
+        else:
+            fromBpu = FromBpuBundle.from_prefix("fromBpu_")
+
+    ftq_bundle = FtqBundleDynamic.from_prefix('io_')
+    ftq_bundle.bind(dut)
     toffee_request.add_cov_groups(ftq_cover_points(dut, ftq_bundle))  
-    # add cov groups for test_ftq_top10, which is related to ftq commit
+
+    # For test_ftq_top10
     toffee_request.add_cov_groups([
         to_bpu_redirect(dut),
         update_stall(dut),
@@ -417,7 +414,16 @@ async def ftq_env(toffee_request: toffee_test.ToffeeRequest):
         update_rob_commit_ptr(ftq_bundle.fromBackend),
         mmio_last_commit(dut),
         ftb_entry_gen_modify_old(dut),
-        update_ftb_entry(dut)
+        update_ftb_entry(dut),
+    ])
+    # For test_ftq_top1
+    toffee_request.add_cov_groups([
+        ftq_get_bpu_resp_ready(dut),
+        bpu_resp_valid(dut),
+        bpu_in_fire(dut),
+        not_allow_BPU_in(dut),
+        allow_BPU_in_when_resp_redirect(dut),
+        transfer_flush_to_IFU(dut),
+        transfer_flush_to_Prefetch(dut),
     ])
     yield FtqEnv(ftq_bundle, dut=dut)  
-   

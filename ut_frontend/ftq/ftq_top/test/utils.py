@@ -2,24 +2,23 @@ import random
 
 from ut_frontend.ftq.ftq_top.env.ftq_bundle import BranchPredictionBundle, FromBackendBundle
 from ut_frontend.ftq.ftq_top.ref.FtqRef import FTQ
-# from .top_test_fixture import NewDUTFtqTop
-####################
-# Utils for ftqPtr #
-####################
+
 from ..ref.FtqPtr import CircularQueuePtr, distance_between
 FTQSIZE = 64
-# 生成用于端口赋值的随机字典
+
+#=====================================
+#   Generate input to assign the port
+#=====================================
 def gen_bpu_branch_resp_dict() -> dict:
-    """根据端口字段生成随机赋值字典"""
     return {
-        # 3 stages 阶段共享信号
+        # 3 stages
         "valid": random.randint(0, 1),
-        "pc_3": random.randint(0, (1 << 50) - 1),  # 50位
+        "pc_3": random.randint(0, (1 << 50) - 1),  # 50
         "full_pred_3_br_taken_mask_0": random.randint(0, 1),
         "full_pred_3_br_taken_mask_1": random.randint(0, 1),
         "full_pred_3_slot_valids_0": random.randint(0, 1),
         "full_pred_3_slot_valids_1": random.randint(0, 1),
-        "full_pred_3_targets_0": random.randint(0, (1 << 50) - 1),  # 50位
+        "full_pred_3_targets_0": random.randint(0, (1 << 50) - 1),  # 50
         "full_pred_3_targets_1": random.randint(0, (1 << 50) - 1),
         "full_pred_3_offsets_0": random.randint(0, (1 << 4) - 1),
         "full_pred_3_offsets_1": random.randint(0, (1 << 4) - 1),
@@ -27,15 +26,14 @@ def gen_bpu_branch_resp_dict() -> dict:
         "full_pred_3_fallThroughErr": random.randint(0, 1),
         "full_pred_3_is_br_sharing": random.randint(0, 1),
         "full_pred_3_hit": random.randint(0, 1),
-        # s2/s3 阶段专用信号
+        # s2/s3 
         "valid_3": random.randint(0, 1),
         "hasRedirect_3": random.randint(0, 1),
         "ftq_idx_flag": random.randint(0, 1),
-        "ftq_idx_value": random.randint(0, (1 << 6) - 1),  # 6位
+        "ftq_idx_value": random.randint(0, (1 << 6) - 1),  # 6
     }
 
 def gen_last_stage_ftb_entry_dict() -> dict:
-    """根据端口字段生成随机赋值字典"""
     return {
         "isCall": random.randint(0, 1),
         "isRet": random.randint(0, 1),
@@ -53,7 +51,6 @@ def gen_last_stage_ftb_entry_dict() -> dict:
     }
 
 def gen_last_stage_spec_info_dict() -> dict:
-    """根据端口字段生成随机赋值字典"""
     return {
             "histPtr_flag": random.randint(0, 1),
             "histPtr_value": random.randint(0, (1 << 8) - 1),   # 8 bits
@@ -70,9 +67,7 @@ def gen_last_stage_spec_info_dict() -> dict:
             "sc_disagree_1": random.randint(0, 1)
     }
 
-# 一点未满足的输入约束：s1下一个周期的pc： 应该为它预测的跳转目标，如果在预测为不跳转的情况下，又应该为多少
-# 其次，s2阶段的pc应该为上一周期s1的pc，s3阶段的pc应该为上一周期s2的pc
-# 但是我们在FTQ这里主要以验证FTQ的正确性为主，故减少了对输入约束的考虑，后续可以考虑添加
+
 def gen_bpu_resp(bpu_ptr: CircularQueuePtr = None):
     port_dict_s1 = gen_bpu_branch_resp_dict()
     if(bpu_ptr is not None):
@@ -110,7 +105,7 @@ def gen_bpu_resp(bpu_ptr: CircularQueuePtr = None):
     return port_dict_s1, port_dict_s2, port_dict_s3
 
 def gen_backend_inputs_dict():
-    """生成 backend -> ftq 的输入字典（随机）"""
+    """ backend -> ftq """
     return {
         "io_fromBackend_redirect_valid": random.randint(0, 1),
         "io_fromBackend_redirect_bits_ftqIdx_flag": random.randint(0, 1),
@@ -132,7 +127,7 @@ def gen_backend_inputs_dict():
     }
 
 def gen_rob_commits_dict():
-    """生成单个 rob_commit 字段字典（用于 0..7 个 commit 槽）"""
+    """rob_commit"""
     return {
         "valid": random.randint(0, 1),
         "commitType": random.randint(0, (1 << 3) - 1),
@@ -142,7 +137,7 @@ def gen_rob_commits_dict():
     }
 
 def gen_ifu_inputs_dict():
-    """生成 ifu -> ftq 的输入字典（随机）"""
+    """ ifu -> ftq """
     d = {}
     d["io_fromIfu_pdWb_valid"] = random.randint(0, 1)
     # PCs
@@ -169,18 +164,12 @@ def gen_ifu_inputs_dict():
     return d
 
 def gen_ifu_inputs_dict_full() -> dict:
-    """生成 ifu -> ftq 的完整输入字典（随机），包含 IFU 字段和若干 backend rob_commits 字段以便驱动器使用"""
+    """ ifu -> ftq """
     d = gen_ifu_inputs_dict()
-    # add 8 backend rob_commits entries (io_fromBackend_rob_commits_0..7_<field>)
-    # for i in range(8):
-    #     rc = gen_rob_commits_dict()
-    #     prefix = f"io_fromBackend_rob_commits_{i}_"
-    #     for k, v in rc.items():
-    #         d[prefix + k] = v
     return d | gen_rob_commits_dict_full()
 
 def gen_rob_commits_dict_full() -> dict:
-    """生成完整的 8 个 rob_commit 字段字典（随机），用于驱动器使用"""
+    """ full rob_commit info """
     d = {}
     for i in range(8):
         rc = gen_rob_commits_dict()
@@ -192,44 +181,16 @@ def gen_rob_commits_dict_full() -> dict:
                 d[prefix + k] = v
     return d
 
-# This method do not make sure receive resp ready, need ready first
-def set_bpu_resp_fire(dut):
-    dut.io_fromBpu_resp_valid.value = 1
-    # Will fire if ready at the same time
-
-# allowBpuIn := !ifuFlush && !backendRedirect.valid && !backendRedirectReg.valid
-# ifuFlush := fromIfuRedirect.valid || ifuRedirectToBpu.valid, 
-# 其中ifuRedirectToBpu实际上是前者的寄存器版本，保留上一周期前者的值，所以ifuFlush实际是将来自ifu的flush保留两个周期
-# fromIfuRedirect.valid              := pdWb.valid && pdWb.bits.misOffset.valid && !backendFlush
-# backendRedirect.valid := io.fromBackend.redirect.valid, backendFlush将backendRedirect保存两个周期
-# involved input pins:
-# io_fromIfu_pdWb_valid
-# io_fromIfu_pdWb_bits_misOffset_valid
-# io_fromBackend_redirect_valid
-# def set_allow_bpu_in(dut):
-
-# # This input will make ifuFlush, keep 2 cycles
-# ifuFlush_input_dict ={
-#     "io_fromBackend_redirect_valid":0,
-#     "io_fromIfu_pdWb_bits_misOffset_valid":1,
-#     "io_fromIfu_pdWb_valid":1,
-# }
-# # This input will make backendRedirect, keep 2 cycles
-# backendRedirect_input_dict={
-#     "io_fromBackend_redirect_valid":1,
-# }
 
 
 
 
 
-# The set will keep 2 cycles
-def set_ifuFlush(dut, dict):
-    dut.io_fromBackend_redirect_valid.value = dict.get("io_fromBackend_redirect_valid", 0)
-    dut.io_fromIfu_pdWb_bits_misOffset_valid.value = dict.get("io_fromIfu_pdWb_bits_misOffset_valid", 0)
-    dut.io_fromIfu_pdWb_valid.value = dict.get("io_fromIfu_pdWb_valid", 0)
 
 
+#=====================================
+#   Simulate the behavior of FTQ
+#=====================================
 def bpu_resp_ready_ref(dut):
     if dut.canCommit.value == 1 or dut.valid_entries() < FTQSIZE:
         assert dut.io_fromBpu_resp_ready.value == 1
@@ -357,12 +318,6 @@ def validInstructions_ref(dut):
         (s == c_toCommit or s == c_committed)
         for s in row
     ]
-    # validInstructions = (inst.value for inst in dut.validInstructions)
-    # indices = [i for i, v in enumerate(validInstructions) if v]
-    # idx = indices[-1] if indices else -1
-    # lastInstructionStatus = dut.instructionStatus[idx].value if idx >= 0 else None
-    # canCommit = canCommit and (dut.gen_rob_comm_ptr() > dut.gen_ifu_wb_ptr() or \
-    #                            (any(validInstructions) and lastInstructionStatus == c_committed))
     return validInstructions
 
 def lastInstructionStatus_ref(dut, validInstructions):
@@ -386,8 +341,8 @@ def canCommit_ref(dut, validInstructions):
     ifuWbPtr = dut.gen_ifu_wb_ptr()
     robCommPtr = dut.gen_rob_comm_ptr()
     lastInstructionStatus = lastInstructionStatus_ref(dut, validInstructions)
-    print("lastInstructionStatus: ", lastInstructionStatus)
-    print("commPtr: ", commPtr.value)
+    # print("lastInstructionStatus: ", lastInstructionStatus)
+    # print("commPtr: ", commPtr.value)
     may_have_stall_from_bpu = dut.bpu_ftb_update_stall.value != 0
     canCommit = (
         commPtr != ifuWbPtr
@@ -427,12 +382,6 @@ def canMoveCommPtr_ref(dut, validInstructions):
 
 def last_valid_rob_commit_ref(fromBackend: FromBackendBundle):
     rob_commits = []
-    # for i in range(8):
-    #     rb = getattr(fromBackend, f"rob_commits_{i}", None)
-    #     if rb is None:
-    #         print(f"rob_commits_{i} not found")
-    #     else:
-    #         print(f"rob_commits_{i}.valid = {rb.valid.value}")
     for i in range(8):
         rob_commit = getattr(fromBackend, f"rob_commits_{i}")
         rob_commits.append(rob_commit)
@@ -508,39 +457,7 @@ class FtbSlot:
         self.tarStat = stat
         self.sharing = int(is_share)
 
-    # def set_lower_stat_by_target(self, pc, target, is_share):
-    #     # 1. 确定 offLen
-    #     offLen = self.subOffsetLen if is_share else self.offsetLen
-    #     VAddrBits = 50
-    #     shift_amt = offLen + 1
-        
-    #     # 2. 提取 Higher 部分 (对应 pc(VAddrBits-1, offLen+1))
-    #     # 这里的 mask 位数必须严格等于 VAddrBits - 1 - (offLen + 1) + 1
-    #     higher_len = VAddrBits - shift_amt
-    #     higher_mask = (1 << higher_len) - 1
-        
-    #     pc_higher = (pc >> shift_amt) & higher_mask
-    #     target_higher = (target >> shift_amt) & higher_mask
 
-    #     # 3. 比较状态
-    #     if target_higher > pc_higher:
-    #         stat = TAR_OVF
-    #     elif target_higher < pc_higher:
-    #         stat = TAR_UDF
-    #     else:
-    #         stat = TAR_FIT
-
-    #     # 4. 提取 Lower 部分 (对应 target(offLen, 1))
-    #     # 注意：Chisel 的 (msb, lsb) 是包含边界的
-    #     # target(offLen, 1) 表示提取 offLen - 1 + 1 = offLen 位
-    #     lower_mask = (1 << offLen) - 1
-    #     raw_lower = (target >> 1) & lower_mask
-
-    #     # 5. ZeroExt 扩展到 self.offsetLen 位
-    #     # 确保 raw_lower 放入 self.lower 时符合硬件位宽
-    #     self.lower = raw_lower & ((1 << self.offsetLen) - 1)# Python 整数不限位宽，但在对比信号时需要注意 mask
-    #     self.tarStat = stat
-    #     self.sharing = int(is_share)
     
     # --------------------------------------
     # getTarget 
@@ -585,23 +502,6 @@ class FtbSlot:
 
 from copy import deepcopy
 
-
-# class BrSlot:
-#     def __init__(self):
-#         self.valid = False
-#         self.offset = 0
-#         self.lower = 0
-#         self.sharing = False  # 是否和其他slot共享
-
-#     def set_lower_by_target(self, start_addr, target, is_share):
-#         self.lower = target  # 行为级直接存完整target
-#         self.sharing = is_share
-
-#     def from_another_slot(self, other):
-#         self.valid = other.valid
-#         self.offset = other.offset
-#         self.lower = other.lower
-#         self.sharing = other.sharing
 
 
 class TailSlot(FtbSlot):
@@ -807,22 +707,22 @@ def ftb_entry_gen(
 
         init_entry.strong_bias[0] = True
 
-    print("cfiindex valid:", cfiIndex_valid)
+    # print("cfiindex valid:", cfiIndex_valid)
 
     # ---- case jmp ----
     if entry_has_jmp:
         print("entry_has_jmp")
         init_entry.tailSlot.offset = pd["jmpOffset"]
         init_entry.tailSlot.valid = new_jmp_is_jal or new_jmp_is_jalr
-        print("DEBUG: start_addr = ", start_addr)
-        print("DEBUG: target = ", target)
-        print("DEBUG: jalTarget = ", pd["jalTarget"])
+        # print("DEBUG: start_addr = ", start_addr)
+        # print("DEBUG: target = ", target)
+        # print("DEBUG: jalTarget = ", pd["jalTarget"])
         init_entry.tailSlot.set_lower_stat_by_target(
             start_addr,
             target if cfi_is_jalr else pd["jalTarget"],
             False,
         )
-        print("DEBUG: tailSlot_lower = ", init_entry.tailSlot.lower)
+        # print("DEBUG: tailSlot_lower = ", init_entry.tailSlot.lower)
         init_entry.strong_bias[-1] = new_jmp_is_jalr
 
     # last_jmp_rvi
@@ -831,12 +731,12 @@ def ftb_entry_gen(
     # jmpPft
     jmp_inst_len = 1 if pd["rvcMask"][pd["jmpOffset"]] else 2
     jmp_pft = get_lower(start_addr) + pd["jmpOffset"] + jmp_inst_len
-    print("jmp_pft: ", jmp_pft)
-    print("lower start addr: ", get_lower(start_addr))
-    print("entry has jmp: ", entry_has_jmp)
-    print("last jmp rvi:", last_jmp_rvi)
-    print("jmpOffset: ", pd["jmpOffset"])
-    print("last rvc mask:",pd["rvcMask"][-1])
+    # print("jmp_pft: ", jmp_pft)
+    # print("lower start addr: ", get_lower(start_addr))
+    # print("entry has jmp: ", entry_has_jmp)
+    # print("last jmp rvi:", last_jmp_rvi)
+    # print("jmpOffset: ", pd["jmpOffset"])
+    # print("last rvc mask:",pd["rvcMask"][-1])
 
     if entry_has_jmp and not last_jmp_rvi:
         init_entry.pftAddr = jmp_pft & 0b1111
@@ -867,19 +767,6 @@ def ftb_entry_gen(
 
     # insert position
     new_br_insert_onehot = []
-    # for i in range(numBr):
-    #     if i == 0:
-    #         cond = (not oe.brSlots[0].valid) or new_br_offset < oe.brSlots[0].offset
-    #     else:
-    #         cond = (
-    #             oe.brSlots[i - 1].valid
-    #             and new_br_offset > oe.brSlots[i - 1].offset
-    #             and (
-    #                 not oe.brSlots[i].valid
-    #                 or new_br_offset < oe.brSlots[i].offset
-    #             )
-    #         )
-    #     new_br_insert_onehot.append(cond)
     for i in range(numBr):
         if i == 0:
             cond = (not oe.brSlots[0].valid) or new_br_offset < oe.brSlots[0].offset
@@ -920,80 +807,37 @@ def ftb_entry_gen(
     may_have_to_replace = oe.noEmptySlotForNewBr  # 所有br槽都满了
     pft_need_to_change = is_new_br and may_have_to_replace
 
-    ############### notice ###########################
-    # if pft_need_to_change:
-    #     print("pft need to change", pft_need_to_change)
-    #     #  new_pft_offset
-    #     # Chisel: Mux(!new_br_insert_onehot.asUInt.orR, new_br_offset, oe.allSlotsForBr.last.offset)
-    #     if not any(new_br_insert_onehot):
-    #         # 新br应该插入到所有现有br之后 → pft用新br的offset
-    #         new_pft_offset = new_br_offset
-    #     else:
-    #         # 新br插入到某个现有br之前 → pft用原来最后一个br的offset
-    #         new_pft_offset = oe.brSlots[-1].offset
-        
-    #     # ── 更新 pftAddr 和 carry ──
-    #     base_lower = get_lower(start_addr)
-    #     new_pft_addr = base_lower + new_pft_offset
-    #     print("new_pft_addr:", new_pft_addr)
-    #     old_entry_modified.pftAddr = new_pft_addr
-        
-    #     # carry = (base_lower +& new_pft_offset) 的最高位
-    #     # 即检查加法结果是否超出了 (carryPos - instOffsetBits) 位表示范围
-    #     addr_bits = carryPos - instOffsetBits
-    #     old_entry_modified.carry = (new_pft_addr >> addr_bits) & 1 != 0
-        
-    #     # ── 清空 jmp 相关标志（因为pft现在指向branch而非jmp）─
-    #     old_entry_modified.last_may_be_rvi_call = False
-    #     old_entry_modified.isCall = False
-    #     old_entry_modified.isRet = False
-    #     old_entry_modified.isJalr = False
 
     if pft_need_to_change:
-        print(f"[DEBUG] pft_need_to_change triggered: {pft_need_to_change}")
 
-        # 1. 选择 new_pft_offset (对应 Chisel 的 Mux 逻辑)
-        # 如果 new_br_insert_onehot 全为 0 (orR 为 false)，说明新分支插入在末尾
         if not any(new_br_insert_onehot):
             new_pft_offset = new_br_offset
         else:
-            # 否则，PFT 指向原本的最后一个分支
-            new_pft_offset = oe.brSlots[-1].offset
+            new_pft_offset = oe.allSlots[-1].offset
 
-        # 2. 模拟硬件位宽截断 (Crucial for Bit-level Accuracy)
-        # 在 FTQ 中，pftAddr 的位宽通常由 carryPos - instOffsetBits 决定
+
         lower_width = carryPos - instOffsetBits
         mask = (1 << lower_width) - 1
 
-        # 获取 base_lower 并确保它符合硬件截断后的位宽
         base_lower = get_lower(start_addr) & mask
         
-        # 确保 offset 也在有效范围内 (通常 offset 位宽较小)
         pft_off = new_pft_offset & mask
 
-        # 3. 模拟 Chisel 的 +& 操作 (带有进位的加法)
-        # Chisel: (getLower +& new_pft_offset)
-        # 结果会比输入多 1 位，最高位即为 carry
         full_sum = base_lower + pft_off
-        
-        # 提取低位作为 pftAddr
+
         new_pft_addr = full_sum & mask
         
-        # 提取第 lower_width 位作为进位 (MSB)
-        # 例如 lower_width=12，则检查第 12 位 (从0开始数) 是否为 1
         carry_bit = (full_sum >> lower_width) & 1
 
-        # 4. 更新 Entry 状态
         old_entry_modified.pftAddr = new_pft_addr
         old_entry_modified.carry = bool(carry_bit)
 
-        # 5. 清空 JMP 相关标志位 (PFT 现在指向的是 Branch 后的地址)
         old_entry_modified.last_may_be_rvi_call = False
         old_entry_modified.isCall = False
         old_entry_modified.isRet = False
         old_entry_modified.isJalr = False
 
-        print(f"[DEBUG] New PFT Addr: {hex(new_pft_addr)}, Carry: {old_entry_modified.carry}")
+        # print(f"[DEBUG] New PFT Addr: {hex(new_pft_addr)}, Carry: {old_entry_modified.carry}")
     # ------------------------------------------------
     # 3 jalr target modify
     # ------------------------------------------------
@@ -1022,16 +866,6 @@ def ftb_entry_gen(
     old_entry_strong_bias = deepcopy(oe)
     strong_bias_modified = False
 
-    # for i in range(numBr):
-    #     if br_recorded_vec[i]:
-    #         old_entry_strong_bias.strong_bias[i] = (
-    #             oe.strong_bias[i]
-    #             and cfiIndex_valid
-    #             and oe.brSlots[i].valid
-    #             and cfiIndex_bits == oe.brSlots[i].offset
-    #         )
-    #         if oe.strong_bias[i] and not old_entry_strong_bias.strong_bias[i]:
-    #             strong_bias_modified = True
     if br_recorded_vec[0]:
         old_entry_strong_bias.strong_bias[0] = (
             oe.strong_bias[0] and cfiIndex_valid and oe.brSlots[0].valid 
@@ -1057,13 +891,13 @@ def ftb_entry_gen(
     else:
         if is_new_br:
             new_entry = old_entry_modified
-            print("use old_entry_modified")
+            print("use old_entry_modified result")
         elif jalr_target_modified:
             new_entry = old_entry_jmp_target_modified
-            print("use old_entry_jmp_target_modified")
+            print("use old_entry_jmp_target_modified result")
         else:
             new_entry = old_entry_strong_bias
-            print("use old_entry_strong_bias")
+            print("use old_entry_strong_bias result")
 
     # ------------------------------------------------
     # 6 out put signal
@@ -1092,10 +926,10 @@ def ftb_entry_gen(
     )
 
     if hit and not is_new_br and not jalr_target_modified and not strong_bias_modified:
-        print("is old")
+        print("ftb_entry_gen result is old entry")
     else:
-        print("is new")
-    print("hit" if hit else "not hit")
+        print("ftb_entry_gen result is new entry")
+    print("FTB entry hit" if hit else "FTB entry miss")
     return {
         "new_entry": new_entry,
         "new_br_insert_pos": new_br_insert_onehot,
@@ -1120,37 +954,3 @@ def commit_mispredict(
         m and (state == c_committed)
         for m, state in zip(mis, commit_state)
     ]
-
-# # We need 2 cycles to get the correct inputs for ftb_entry_gen
-# async def get_ftb_entry_gen_input(dut, newest_entry_target_reg):
-#     commPtr = dut.gen_comm_ptr()
-#     # Cycle 1
-#     start_addr = dut.ftq_pc_mem_io_commPtr_rdata_startAddr.value
-#     use_newest = dut.gen_comm_ptr() == dut.gen_newest_entry_ptr()
-#     print("commit ptr:", dut.gen_comm_ptr())
-#     print("newest entry ptr:", dut.gen_newest_entry_ptr())
-#     commPtrPlus1_rdata_startAddr = dut.ftq_pc_mem_io_commPtrPlus1_rdata_startAddr.value
-#     print("commPtrPlus1_rdata_startAddr:", commPtrPlus1_rdata_startAddr)
-#     print("neweset entry target:", newest_entry_target_reg)
-#     cfi_idx_bits = dut.cfiIndex_vec[commPtr.value]["bits"].value
-#     cfi_idx_valid = dut.cfiIndex_vec[commPtr.value]["valid"].value
-    
-#     mispredict_vec = [i.value for i in dut.mispredict_vecs[commPtr.value]]
-#     commit_state = [i.value for i in dut.commitStateQueue[commPtr.value]]
-#     mispredict_vec = commit_mispredict(mispredict_vec,commit_state)
-#     await dut.AStep(1)
-#     # Cycle 2
-#     old_entry = FTBEntry(numBrSlot=1, dict=dut.gen_ftq_meta_1r_sram_io_rdata_0_ftb_entry_value())
-#     pd = dut.gen_ftq_pd_mem_io_rdata_1_value()
-#     # cfi_idx_bits = dut.cfiIndex_vec[commPtr.value]["bits"].value
-#     # cfi_idx_valid = dut.cfiIndex_vec[commPtr.value]["valid"].value
-#     target = newest_entry_target_reg if use_newest else commPtrPlus1_rdata_startAddr
-#     hit  = dut.entry_hit_status[commPtr.value].value == h_hit
-#     # mispredict_vec = [i.value for i in dut.mispredict_vecs[commPtr.value]]
-#     # commit_state = [i.value for i in dut.commitStateQueue[commPtr.value]]
-#     # mispredict_vec = commit_mispredict(mispredict_vec,commit_state)
-#     print("DEBUG for input result:")
-#     for name in ["start_addr", "old_entry", "pd", "cfi_idx_valid", "cfi_idx_bits", "target", "hit", "mispredict_vec"]:
-#         print(f"{name}: {locals()[name]}")
-        
-#     return start_addr, old_entry, pd, cfi_idx_valid, cfi_idx_bits, target, hit, mispredict_vec

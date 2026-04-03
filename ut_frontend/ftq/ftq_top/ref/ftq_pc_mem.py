@@ -11,7 +11,7 @@ class Ftq_RF_Components:
 
     @classmethod
     def from_branch_prediction(cls, bp: BranchPredictionBundle):
-        """从 BranchPredictionBundle 构造"""
+        """ Generate from BranchPredictionBundle """
         return cls(
             startAddr=bp.pc_3.value,
             nextLineAddr=bp.pc_3.value + 64,  # Cache line = 64 bytes

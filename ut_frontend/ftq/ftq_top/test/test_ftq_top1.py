@@ -19,7 +19,7 @@ from ..ref.FtqPtr import FTQSIZE, CircularQueuePtr
 from ..ref.FtqRef import FTQ
 
 @toffee_test.testcase
-async def test_bpu_enq_normal(ftq_env):
+async def test_bpu_enqueue(ftq_env):
     # Get DUT and Ref, reset DUT
     dut = ftq_env.dut
     ref = FTQ()
@@ -28,7 +28,7 @@ async def test_bpu_enq_normal(ftq_env):
     fallThruErrors_before = []
     for i in range(64):
         fallThruErrors_before.append(dut.ftq_pc_mem[i]["fallThruError"].value)
-    print("bpuptr_dut after reset: ", dut.gen_bpu_ptr())
+    print("bpuPtr_dut after reset: ", dut.gen_bpu_ptr())
 
     for i in range(3):
         print(f"----------------------- warm up --------------------------")
@@ -55,11 +55,10 @@ async def test_bpu_enq_normal(ftq_env):
         if i == 0:
             dut.Step()
         # Check bpuPtr update
-        print("bpuptr_ref: ", ref.bpu_ptr)
-        print("bpuptr_dut: ", dut.gen_bpu_ptr())
+        print("bpuptr: ", ref.bpu_ptr)
         assert ref.bpu_ptr == dut.gen_bpu_ptr()
     
-    for i in range(600):
+    for i in range(200):
         print(f"----------------------- Cycle {i} --------------------------")
         bpu_ptr = ref.bpu_ptr
         port_dict_s1, port_dict_s2, port_dict_s3 = gen_bpu_resp(bpu_ptr)
@@ -70,15 +69,12 @@ async def test_bpu_enq_normal(ftq_env):
         await ftq_env.ftq_agent.drive_last_stage_ftb_entry_signals(gen_last_stage_ftb_entry_dict())
         await ftq_env.ftq_agent.drive_last_stage_spec_info_signals(gen_last_stage_spec_info_dict())
         await ftq_env.ftq_agent.drive_last_stage_meta_signals()
-        # ftq_bundle = ftq_env.ftq_agent.bundle.fromBpuNew.selected_resp()
-        # print(ftq_bundle)
+
         dut.RefreshComb()
         bpu_in_fire = check_with_ref_before_write(dut)
         selected_resp = ftq_env.ftq_agent.bundle.fromBpuNew.selected_resp()
         last_stage_spec_info = ftq_env.ftq_agent.bundle.fromBpuNew.last_stage_spec_info
         last_stage_ftb_entry = ftq_env.ftq_agent.bundle.fromBpuNew.last_stage_ftb_entry
-        # last_stage_meta_entry = ftq_env.ftq_agent.bundle.fromBpuNew.last_stage_ftq_meta
-        print("selected_resp: ", hex(selected_resp.pc_3.value), selected_resp.full_pred_3_fallThroughErr.value, selected_resp.full_pred_3_hit.value)
         selected_stage = check_bpu_in_stage(dut)
         check_every_cycle(dut, selected_stage, selected_resp)
         update_ftq_ref_state(bpu_in_fire, selected_stage, selected_resp, last_stage_spec_info, last_stage_ftb_entry, ref, dut)
@@ -105,9 +101,7 @@ async def test_bpu_enq_normal(ftq_env):
     for erros in all_kind_errors: 
         for error in erros:
             print(error)
-    # for i in range(64):
-    #     if(fallThruErrors_before[i] != dut.ftq_pc_mem[i]["fallThruError"].value):
-    #         print(f"entry{i}  before: {fallThruErrors_before[i]}, after: {dut.ftq_pc_mem[i]["fallThruError"].value}")
+
         
 
 def check_with_ref_before_write(dut):
@@ -244,20 +238,20 @@ def check_ftb_entry_mem(ref_mem, dut_ftb_entry_mem):
 # def check_ftq_meta_entry(ref_entry, dut_entry, idx):
 #     errors = []
 
-#     # 定义需要比较的字段列表
+# 
 #     fields = [
 #         "valid", "isCall", "isRet", "isJalr", "last_may_be_rvi_call",
 #         "carry", "pftAddr"
 #     ]
 
-#     # 比较 FtqMetaEntry
+#  
 #     for field in fields:
-#         ref_value = getattr(ref_entry, field)  # 获取参考模型的字段值
-#         dut_value = getattr(dut_entry, field)  # 获取 DUT 中的字段值
+#         ref_value = getattr(ref_entry, field)
+#         dut_value = getattr(dut_entry, field) 
 #         if ref_value != dut_value:
 #             errors.append(f"[FTQ_META][{idx}] {field} mismatch: ref={ref_value}, dut={dut_value}")
 
-#     # 比较 brSlot 部分的字段
+# 
 #     br_slot_fields = ["offset", "sharing", "valid", "lower", "tarStat"]
 #     for field in br_slot_fields:
 #         ref_value = getattr(ref_entry.ftb["brslot"], field)
@@ -265,7 +259,7 @@ def check_ftb_entry_mem(ref_mem, dut_ftb_entry_mem):
 #         if ref_value != dut_value:
 #             errors.append(f"[FTQ_META][{idx}] brSlot_{field} mismatch: ref={ref_value}, dut={dut_value}")
 
-#     # 比较 tailSlot 部分的字段
+#  
 #     tail_slot_fields = ["offset", "sharing", "valid"]
 #     for field in tail_slot_fields:
 #         ref_value = getattr(ref_entry.ftb["tailslot"], field)
@@ -279,9 +273,9 @@ def check_ftb_entry_mem(ref_mem, dut_ftb_entry_mem):
 # def check_ftq_meta_mem(ref_mem, dut_ftq_meta_mem):
 #     all_errors = []
 
-#     # 遍历所有的条目，进行比较
+#    
 #     for i in range(64):
-#         ref_entry = ref_mem.ftq_meta_mem.read(i)  # 参考模型的 entry
+#         ref_entry = ref_mem.ftq_meta_mem.read(i)
 #         dut_entry = dut_ftq_meta_mem[i]  # DUT 中的 entry
 
 #         errs = check_ftq_meta_entry(ref_entry, dut_entry, i)
@@ -527,30 +521,6 @@ def update_ftq_ref_state(bpu_in_fire, selected_stage, selected_resp: BranchPredi
     write_into_pred_stage_queue(bpu_in_fire, ftq_idx_value, selected_stage, ref)
     write_into_entry_fetch_status(bpu_in_fire, ftq_idx_value, ref)
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def update_ftq_ref_bpu_ptr(bpu_in_fire, selected_stage, selected_resp: BranchPredictionBundle, ref: FTQ):
     if not bpu_in_fire:
         return

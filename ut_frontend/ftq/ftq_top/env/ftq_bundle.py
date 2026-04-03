@@ -258,7 +258,6 @@ class BranchPredictionResp(Bundle):
     last_stage_ftb_entry = LastStageFtbEntryBundle.from_prefix("bits_last_stage_ftb_entry_")
 
     def selected_resp(self) -> BranchPredictionBundle:
-        """模拟 PriorityMux：选最高优先级有效的阶段"""
         if self.s3.valid_3.value and self.s3.hasRedirect_3.value:
             print("s3 selected")
             return self.s3
@@ -271,13 +270,6 @@ class BranchPredictionResp(Bundle):
         else:
             print("No stage selected, fallback to s1")
             return self.s1  # fallback
-
-    # def last_stage(self) -> BranchPredictionBundle:
-    #     """s3 是 last stage"""
-    #     return self.s3
-
-# class NewFromBpuBundle(Bundle):
-#     pred = BranchPredictionBundle.from_prefix("pred_")
 
 class toBpu_redirect(Bundle):
     valid = Signal()
@@ -337,7 +329,7 @@ class toBpu_update(Bundle):
     bits_full_target = Signal()
 
 
-class toBpu(Bundle):
+class toBpuBundle(Bundle):
     redirect = toBpu_redirect.from_prefix("redirect_")
     update = toBpu_update.from_prefix("update_")
 
@@ -347,10 +339,11 @@ class FtqBundle(Bundle):
     
     fromBackend = FromBackendBundle.from_prefix("fromBackend_")  
     fromIfu = FromIfuBundle.from_prefix("fromIfu_")  
-    # fromBpu = FromBpuBundle.from_prefix("fromBpu_")
+    fromBpu = FromBpuBundle.from_prefix("fromBpu_")
     toIfu = ToIfuBundle.from_prefix("toIfu_")
     toICache = ToICacheBundle.from_prefix("toICache_")  
     toPrefetch = ToPrefetchBundle.from_prefix("toPrefetch_")  
+    # fromBpuNew = BranchPredictionResp.from_prefix("fromBpu_resp_")
+    toBpu = toBpuBundle.from_prefix("toBpu_")
 
-    fromBpuNew = BranchPredictionResp.from_prefix("fromBpu_resp_")
-    toBpu = toBpu.from_prefix("toBpu_")
+

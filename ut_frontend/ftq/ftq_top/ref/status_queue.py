@@ -4,24 +4,21 @@ from typing import List
 FtqSize = 64
 PredictWidth = 16
 
-# 提交状态枚举
 C_EMPTY = 0
 C_TO_COMMIT = 1
 C_COMMITTED = 2
 C_FLUSHED = 3
 
-# Fetch 状态枚举
 F_SENT = 0
 F_TO_SEND = 1
 
-# Hit 状态
 NOT_HIT = False
 HIT = True
 
 class UpdateTargetQueue:
     def __init__(self, size: int = FtqSize):
         self.size = size
-        self.mem = [0] * size  # 默认目标地址为 0
+        self.mem = [0] * size
 
     def write(self, wen: bool, waddr: int, target: int):
         if wen and 0 <= waddr < self.size:
@@ -33,7 +30,7 @@ class UpdateTargetQueue:
 class CfiIndexVec:
     def __init__(self, size: int = FtqSize):
         self.size = size
-        self.mem = [0] * size  # 0 表示无跳转，或偏移地址
+        self.mem = [0] * size
 
     def write(self, wen: bool, waddr: int, cfi_offset: int):
         if wen and 0 <= waddr < self.size:
@@ -49,7 +46,7 @@ class MispredictVec:
 
     def write(self, wen: bool, waddr: int, is_mispredict: bool = False):
         if wen and 0 <= waddr < self.size:
-            self.mem[waddr] = is_mispredict  # 初始写 False
+            self.mem[waddr] = is_mispredict
 
     def read(self, raddr: int) -> bool:
         return self.mem[raddr] if 0 <= raddr < self.size else False
@@ -75,7 +72,7 @@ class CommitStateQueue:
         self.mem = [[C_EMPTY for _ in range(width)] for _ in range(size)]
 
     def write(self, wen: bool, waddr: int):
-        """写入时全部设为 C_EMPTY"""
+        """Set as C_EMPTY"""
         if wen and 0 <= waddr < self.size:
             self.mem[waddr] = [C_EMPTY] * self.width
 
@@ -86,7 +83,6 @@ class CommitStateQueue:
             return [C_EMPTY] * self.width
 
     def update_single(self, addr: int, inst_idx: int, state: int):
-        """用于后续更新单条指令状态（如 c_toCommit）"""
         if 0 <= addr < self.size and 0 <= inst_idx < self.width:
             self.mem[addr][inst_idx] = state
 
@@ -105,7 +101,7 @@ class EntryHitStatusQueue:
 class EntryFetchStatusQueue:
     def __init__(self, size: int = FtqSize):
         self.size = size
-        self.mem = [F_SENT] * size  # 初始化为已发送
+        self.mem = [F_SENT] * size
 
     def write(self, wen: bool, waddr: int, status: int = F_TO_SEND):
         if wen and 0 <= waddr < self.size:

@@ -2,7 +2,7 @@ from tokenize import group
 import toffee.funcov as fc
 from toffee.funcov import CovGroup
 from ut_frontend.ftq.ftq_top.env.ftq_bundle import FromBackendBundle
-from .utils import canCommit_ref, validInstructions_ref, lastInstructionStatus_ref, firstInstructionFlushed_ref
+from .utils import S2_redirect_ref, S3_redirect_ref, canCommit_ref, validInstructions_ref, lastInstructionStatus_ref, firstInstructionFlushed_ref
 from .utils import last_valid_rob_commit_ref
 
 c_empty     = 0
@@ -10,6 +10,9 @@ c_toCommit  = 1
 c_committed = 2
 c_flushed   = 3
 
+#==================================
+#   Cov Points for testcase 10
+#==================================
 def redirect_from_flush(dut):
     return dut.fromIfuRedirect_valid_probe.value
 
@@ -24,13 +27,6 @@ def to_bpu_redirect(dut)-> CovGroup:
     group.add_watch_point(dut, {"redirect_from_flush": redirect_from_flush}, name="redirect_from_flush")
     group.add_watch_point(dut, {"redirect_from_backend": redirect_from_backend}, name="redirect_from_backend")
     return group
-
-# def test_cov_group():
-#     m = 1
-#     group = CovGroup("test cov group")
-#     group.add_watch_point(m, {
-#         "test cov group": fc.Eq(1),
-#         }, name="test cov group")
 
 def update_stall(dut)-> CovGroup:
     group = CovGroup("we need stall when update BPU")
@@ -155,26 +151,105 @@ def mmio_last_commit(dut)->CovGroup:
 
 def ftb_entry_gen_modify_old(dut)->CovGroup:
     group = CovGroup("modify old ftb entry to commit")
-    group.add_watch_point(dut.ftb_entry_gen_io_is_br_full.value, {
-        "ftb_entry_gen_io_is_br_full": fc.Eq(1),
+    group.add_watch_point(dut.ftb_entry_gen_io_is_br_full, {
+        "ftb_entry_gen_io_is_br_full": fc.CovEq(1),
         }, name="ftb_entry_gen_io_is_br_full")
-    group.add_watch_point(dut.ftb_entry_gen_io_is_jalr_target_modified.value, {
-        "ftb_entry_gen_io_is_jalr_target_modified": fc.Eq(1),
+    group.add_watch_point(dut.ftb_entry_gen_io_is_jalr_target_modified, {
+        "ftb_entry_gen_io_is_jalr_target_modified": fc.CovEq(1),
         }, name="ftb_entry_gen_io_is_jalr_target_modified")
-    group.add_watch_point(dut.ftb_entry_gen_io_is_new_br.value, {
-        "ftb_entry_gen_io_is_new_br": fc.Eq(1),
+    group.add_watch_point(dut.ftb_entry_gen_io_is_new_br, {
+        "ftb_entry_gen_io_is_new_br": fc.CovEq(1),
         }, name="ftb_entry_gen_io_is_new_br")
-    group.add_watch_point(dut.ftb_entry_gen_io_is_strong_bias_modified.value, {
-        "ftb_entry_gen_io_is_strong_bias_modified": fc.Eq(1),
+    group.add_watch_point(dut.ftb_entry_gen_io_is_strong_bias_modified, {
+        "ftb_entry_gen_io_is_strong_bias_modified": fc.CovEq(1),
         }, name="ftb_entry_gen_io_is_strong_bias_modified")
     return group
 
 def update_ftb_entry(dut)->CovGroup:
     group = CovGroup("update ftb entry and commit it to BPU")
-    group.add_watch_point(dut.io_toBpu_update_bits_old_entry.value, {
+    group.add_watch_point(dut.io_toBpu_update_bits_old_entry, {
         "io_toBpu_update_bits_old_entry": fc.Eq(1),
         }, name="io_toBpu_update_bits_old_entry")
-    group.add_watch_point(dut.io_toBpu_update_bits_old_entry.value, {
+    group.add_watch_point(dut.io_toBpu_update_bits_old_entry, {
         "io_toBpu_update_bits_init_entry": fc.Eq(0),
         }, name="io_toBpu_update_bits_init_entry")
     return group
+
+#==================================
+#   Cov Points for testcase 1
+#==================================
+def ftq_get_bpu_resp_ready(dut)->CovGroup:
+    group = CovGroup("FTQ is ready to get the result from BPU")
+    group.add_watch_point(dut.io_fromBpu_resp_ready, {
+        "ftq_get_bpu_resp_ready": fc.Eq(1),
+        }, name="ftq_get_bpu_resp_ready")
+    group.add_watch_point(dut.io_fromBpu_resp_ready, {
+        "ftq_get_bpu_resp_not_ready": fc.Eq(0),
+        }, name="ftq_get_bpu_resp_not_ready")
+    return group
+
+def bpu_resp_valid(dut)->CovGroup:
+    group = CovGroup("BPU's resp is valid to send to BPU")
+    group.add_watch_point(dut.io_fromBpu_resp_valid, {
+        "bpu_resp_valid": fc.Eq(1),
+        }, name="bpu_resp_valid")
+    group.add_watch_point(dut.io_fromBpu_resp_valid, {
+        "bpu_resp_invalid": fc.Eq(0),
+        }, name="bpu_resp_invalid")
+    return group    
+
+def bpu_in_fire(dut)->CovGroup:
+    group = CovGroup("BPU result successfully into FTQ")
+    group.add_watch_point(dut.bpu_in_fire, {
+        "bpu_in_fire": fc.Eq(1),
+        }, name="bpu_in_fire")
+    return group  
+
+def not_allow_BPU_in(dut)->CovGroup:
+    group = CovGroup("not allow BPU in when redirect from backend or IFU")
+    group.add_watch_point(dut.backendRedirect, {
+        "backendRedirect": fc.Eq(1),
+        }, name="backendRedirect")
+    group.add_watch_point(dut.backendRedirectReg, {
+        "backendRedirectReg": fc.Eq(1),
+        }, name="backendRedirectReg")
+    group.add_watch_point(dut.ifu_flush, {
+        "ifuFlush": fc.Eq(1),
+        }, name="ifuFlush")
+    return group      
+
+def allow_BPU_in_with_S2_redirect(dut):
+    allow_bpu_in = dut.allowBpuIn.value
+    S2_redirect = S2_redirect_ref(dut)
+    return allow_bpu_in and S2_redirect
+
+def allow_BPU_in_with_S3_redirect(dut):
+    allow_bpu_in = dut.allowBpuIn.value
+    S3_redirect = S3_redirect_ref(dut)
+    return allow_bpu_in and S3_redirect
+
+def allow_BPU_in_when_resp_redirect(dut)->CovGroup:
+    group = CovGroup("allow BPU with redirect resp")
+    group.add_watch_point(dut, {"allow_BPU_in_with_S2_redirect": allow_BPU_in_with_S2_redirect}, name="allow_BPU_in_with_S2_redirect")
+    group.add_watch_point(dut, {"allow_BPU_in_with_S3_redirect": allow_BPU_in_with_S3_redirect}, name="allow_BPU_in_with_S3_redirect")
+    return group
+
+def transfer_flush_to_IFU(dut)->CovGroup:
+    group = CovGroup("BPU will transfer flush to IFU when resp redirect")
+    group.add_watch_point(dut.io_toIfu_flushFromBpu_s2_valid, {
+        "io_toIfu_flushFromBpu_s2_valid": fc.Eq(1),
+        }, name="io_toIfu_flushFromBpu_s2_valid")
+    group.add_watch_point(dut.io_toIfu_flushFromBpu_s3_valid, {
+        "io_toIfu_flushFromBpu_s3_valid": fc.Eq(1),
+        }, name="io_toIfu_flushFromBpu_s3_valid")
+    return group    
+
+def transfer_flush_to_Prefetch(dut)->CovGroup:
+    group = CovGroup("BPU will transfer flush to IFU when resp redirect")
+    group.add_watch_point(dut.io_toPrefetch_flushFromBpu_s2_valid, {
+        "io_toPrefetch_flushFromBpu_s2_valid": fc.Eq(1),
+        }, name="io_toPrefetch_flushFromBpu_s2_valid")
+    group.add_watch_point(dut.io_toPrefetch_flushFromBpu_s3_valid, {
+        "io_toPrefetch_flushFromBpu_s3_valid": fc.Eq(1),
+        }, name="io_toPrefetch_flushFromBpu_s3_valid")
+    return group    
