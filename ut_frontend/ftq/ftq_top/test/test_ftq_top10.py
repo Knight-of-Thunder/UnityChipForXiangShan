@@ -40,7 +40,7 @@ async def test_commit_to_bpu(ftq_env):
     dut.Step(10)
 
     commit_target_update = newest_entry_target_reg_ref(dut)
-    for i in range(150):
+    for i in range(18000):
         print(f"----------------------- Cycle {i} --------------------------")
         bpu_ptr = ref.bpu_ptr
         port_dict_s1, port_dict_s2, port_dict_s3 = gen_bpu_resp(bpu_ptr)
@@ -79,7 +79,7 @@ async def test_commit_to_bpu(ftq_env):
         commit_target = commit_target_update()
         if canCommit:
             print("FTQ can commit to BPU, update the ref")
-            # update_ref_status(canMoveCommPtr, rob_commit_inputs, ref)
+            update_ref_status(canMoveCommPtr, rob_commit_inputs, ref)
             start_addr = dut.ftq_pc_mem_io_commPtrPlus1_rdata_startAddr.value
             ftb_entry_gen_input = await get_ftb_entry_gen_input(dut, commit_target, commit_target_update)
             # commit_target = commit_target_update()
@@ -106,7 +106,7 @@ def update_ref_status(canMoveCommPtr, rob_commits, ref: FTQ):
     if canMoveCommPtr:
         ref.comm_ptr += 1
 
-    field_names = ["valid", "ftqIdx_flag", "commitType", "ftqIdx_value", "ftqOffset"]
+    field_names = ["valid", "bits_ftqIdx_flag", "bits_commitType", "bits_ftqIdx_value", "bits_ftqOffset"]
     rob_commits_list = []
 
     for i in range(8):
@@ -124,9 +124,9 @@ def update_ref_status(canMoveCommPtr, rob_commits, ref: FTQ):
     commPtr = ref.comm_ptr
     robCommPtr = ref.rob_comm_ptr
     if has_commit:
-        for commit in reversed(rob_commits):
+        for commit in reversed(rob_commits_list):
             if commit["valid"]:
-                ref.rob_comm_ptr = CircularQueuePtr(flag = commit["ftqIdx_flag"], value = commit["ftqIdx_value"])
+                ref.rob_comm_ptr = CircularQueuePtr(flag = commit["bits_ftqIdx_flag"], value = commit["bits_ftqIdx_value"])
                 break
 
     elif commPtr > robCommPtr:

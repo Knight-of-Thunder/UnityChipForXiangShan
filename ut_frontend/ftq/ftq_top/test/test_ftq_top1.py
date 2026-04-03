@@ -58,7 +58,7 @@ async def test_bpu_enqueue(ftq_env):
         print("bpuptr: ", ref.bpu_ptr)
         assert ref.bpu_ptr == dut.gen_bpu_ptr()
     
-    for i in range(200):
+    for i in range(18000):
         print(f"----------------------- Cycle {i} --------------------------")
         bpu_ptr = ref.bpu_ptr
         port_dict_s1, port_dict_s2, port_dict_s3 = gen_bpu_resp(bpu_ptr)
